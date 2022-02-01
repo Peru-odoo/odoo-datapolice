@@ -16,8 +16,8 @@ class Product(models.Model):
 class Bom(models.Model):
     _inherit = 'mrp.bom'
 
-    @api.one
     def check_inactive_products_in_boms(self):
+        self.ensure_one()
         if not self.product_id.active:
             return True
 
