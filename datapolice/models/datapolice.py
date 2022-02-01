@@ -27,12 +27,12 @@ class DataPolice(models.Model):
         self.active = not self.active
 
     @api.constrains("src_model", "domain", "checkdef", "expr")
-    @api.one
     def check_model_domain(self):
-        if self.domain and self.src_model:
-            raise ValidationError("Either provide src_model OR domain")
-        if not self.checkdef and not self.expr:
-            raise ValidationError("Either provide expression or check-function")
+        for rec in self:
+            if rec.domain and rec.src_model:
+                raise ValidationError("Either provide src_model OR domain")
+            if not rec.checkdef and not rec.expr:
+                raise ValidationError("Either provide expression or check-function")
 
     @api.multi
     def run_fix(self):

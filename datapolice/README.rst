@@ -27,6 +27,13 @@ or
   <field name="expr">obj.name != 'not allowed'</field>
 </record>
 
+  <record model="data.police" id="word_copy_in_translation">
+    <field name="model">product.product</field>
+    <field name="checkdef">check_copy_in_translation</field>
+    <field name="name">Word copy in translation</field>
+    <field name="domain">[]</field>
+  </record>
+
 
 Contributors
 ------------
