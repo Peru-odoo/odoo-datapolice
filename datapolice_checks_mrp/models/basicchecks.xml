@@ -9,8 +9,8 @@
     </record>
     <record model="data.police" id="missing_bom">
       <field name="model">product.product</field>
-	  <field name="checkdef"></field>
-	  <field name="expr">bool(obj.env["mrp.bom"].search([('product_id', '=', obj.id)]))</field>
+      <field name="checkdef"></field>
+      <field name="expr">bool(obj.env["mrp.bom"].search([('product_id', '=', obj.id)]))</field>
       <field name="name">Missing BoM</field>
       <field name="domain">[('active', '=', True), ('type', '=', 'product'), ('route_ids.pull_ids.action', '=', 'manufacture')]</field>
     </record>
