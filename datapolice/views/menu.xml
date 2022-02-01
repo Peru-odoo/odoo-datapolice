@@ -6,7 +6,6 @@
       <field name="name">Data-Police</field>
       <field name="res_model">data.police</field>
       <field name="view_mode">tree,form</field>
-      <field name="errors"/>
     </record>
     <menuitem parent="menu_root" id="base.menu_datapolice" action="act_datapolice_window"/>
     <record id="formatters_action" model="ir.actions.act_window">
