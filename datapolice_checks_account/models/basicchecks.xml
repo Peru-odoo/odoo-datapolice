@@ -14,7 +14,7 @@
       <field name="domain">[]</field>
     </record>
     <record model="data.police" id="invoice_partners">
-      <field name="model">account.invoice</field>
+      <field name="model">account.move</field>
       <field name="checkdef">check_invoice_partners</field>
       <field name="name">checking invoices when parent company changed but invoices exist; otherwise payments are incorrectly distributed (August 2016 detected)</field>
       <field name="domain">[('state', 'not in', ['paid', 'cancel'])]</field>

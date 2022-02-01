@@ -11,7 +11,7 @@ class Product(models.Model):
 
 
 class Invoice(models.Model):
-    _inherit = 'account.invoice'
+    _inherit = 'account.move'
 
     def check_invoice_partners(self):
         self.ensure_one()
