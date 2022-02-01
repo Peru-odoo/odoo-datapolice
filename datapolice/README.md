@@ -11,7 +11,6 @@
 ```
 
 ```python
-@api.multi
 def datapolice_check_same_lot_type(self):
     if self.origin_sales and self.matching_prod_product_ids:
         if not self.lot_type == self.matching_prod_product_ids:
