@@ -3,8 +3,8 @@ from odoo import models, api, _
 class Product(models.Model):
     _inherit = 'product.product'
 
-    @api.one
     def check_buy_articles_that_have_no_price(self):
+        self.ensure_one()
         SI = self.env["product.supplierinfo"]
         has_price = bool(self.standard_price)
         if has_price:

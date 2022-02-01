@@ -3,18 +3,18 @@ from odoo import models, api, _
 class Product(models.Model):
     _inherit = 'product.product'
 
-    @api.one
     def check_product_account(self):
-        for company in self.env['res.company'].search([]):
-            if not self.with_context(force_company=company.id).property_account_income_id:
-                raise Exception("Property Account Incoming missing for {} {} {}".format(company.name, self.default_code or '', self.name or ''))
+        for self in self:
+            for company in self.env['res.company'].search([]):
+                if not self.with_context(force_company=company.id).property_account_income_id:
+                    raise Exception("Property Account Incoming missing for {} {} {}".format(company.name, self.default_code or '', self.name or ''))
 
 
 class Invoice(models.Model):
     _inherit = 'account.invoice'
 
-    @api.one
     def check_invoice_partners(self):
+        self.ensure_one()
         if not self.move_id:
             return True
 
@@ -35,8 +35,8 @@ class Invoice(models.Model):
 class Partner(models.Model):
     _inherit = 'res.partner'
 
-    @api.one
     def check_missing_payment_terms_and_personal_accounts(self):
+        self.ensure_one()
         param_fields = []
 
         if self.customer:

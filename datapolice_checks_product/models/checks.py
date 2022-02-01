@@ -3,8 +3,8 @@ from odoo import models, api, _
 class Product(models.Model):
     _inherit = 'product.product'
 
-    @api.one
     def check_incoming_noproduction_nopicking(self):
+        self.ensure_one()
         product = self
         if product.type not in ['product']:
             return True

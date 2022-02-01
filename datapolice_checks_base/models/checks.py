@@ -3,8 +3,8 @@ from odoo import models, api, _
 class Product(models.Model):
     _inherit = 'product.product'
 
-    @api.one
     def check_copy_in_translation(self):
+        self.ensure_one()
         self.env.cr.execute("""
         select
             product_product.id
@@ -21,8 +21,8 @@ class Product(models.Model):
 
         return bool(product_ids)
 
-    @api.one
     def check_translations(self):
+        self.ensure_one()
         self.env.cr.execute("""
             select
                 id, res_id, name, lang, value

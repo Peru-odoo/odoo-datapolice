@@ -3,8 +3,8 @@ from odoo import models, api, _
 class Product(models.Model):
     _inherit = 'product.product'
 
-    @api.one
     def check_recursion_in_bom(self):
+        self.ensure_one()
         if not hasattr(self, 'get_descendants'):
             return True
         try:
