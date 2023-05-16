@@ -21,7 +21,6 @@
             <group col="4">
               <field name="cronjob_group_id"/>
               <field name="name"/>
-              <field name="fixdef"/>
             </group>
             <notebook>
               <page string="Triggers">
@@ -58,7 +57,7 @@
                 </group>
               </page>
               <page string="Last Errors">
-                <button type="object" name="run_fix" attrs="{'invisible': ['|', ('last_errors', '=', False), ('fixdef', '=', False)]}" string="Fix Errors"/>
+                <button type="object" name="run_fix" attrs="{'invisible': ['|', ('last_errors', '=', False), ('fix_expr', '=', False)]}" string="Fix Errors"/>
                 <field name="last_errors" nolabel="1" readonly="1"/>
               </page>
 

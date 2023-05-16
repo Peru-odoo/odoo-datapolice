@@ -7,15 +7,15 @@
         <tree string="">
           <button name="run" string="Run" type="object" icon="gtk-execute"/>
           <field name="name"/>
-          <field name="model"/>
-          <field name="checkdef"/>
-          <field name="fixdef"/>
-          <field name="expr"/>
+          <field name="model_id"/>
+          <field name="check_expr"/>
+          <field name="fix_expr"/>
           <field name="enabled"/>
           <field name="domain"/>
           <field name="errors"/>
           <field name="user_ids"/>
           <field name="recipients"/>
+          <field name="trigger_ids"/>
         </tree>
       </field>
     </record>
