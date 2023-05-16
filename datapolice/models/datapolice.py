@@ -50,7 +50,7 @@ class DataPolice(models.Model):
     make_activity = fields.Boolean("Make Activity")
     activity_type_id = fields.Many2one("mail.activity.type", string="Activity Type")
     activity_deadline_days = fields.Integer("Activity Deadline Days")
-    activity_summary = fields.Summary("Activity Summary")
+    activity_summary = fields.Char("Activity Summary")
     activity_user_id = fields.Many2one('res.users', string="Assign Activity User")
 
     def _make_activity(self, instance):
@@ -61,7 +61,7 @@ class DataPolice(models.Model):
             'res_id': instance.id,
             'automated': True,
             'date_deadline': fields.Datetime.to_string(dt),
-            'summary': self.summary,
+            'summary': self.activity_summary,
         }
         if self.activity_user_id:
             data['user_id'] = self.activity_user_id.id
