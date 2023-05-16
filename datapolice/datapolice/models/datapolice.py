@@ -1,8 +1,6 @@
 from odoo import models, fields, api, _
+import json
 import base64
-from pathlib import Path
-import tempfile
-import traceback
 from datetime import datetime
 from odoo.exceptions import UserError, RedirectWarning, ValidationError
 import logging
@@ -15,9 +13,9 @@ class DataPolice(models.Model):
     active = fields.Boolean(default=True)
     name = fields.Char('Name', required=True, translate=True)
     fetch_expr = fields.Text("Fetch Expr", help="If given then used; return records, otherwise domain is used with model")
-    check_expr = fields.Text('Expression to chec', required=False, help="Input: obj/object - return False for error, return None/True for ok, or raise Exception")
-    fixdef = fields.Char('Def to fix error', required=False)
-    model = fields.Char('Model', size=128, required=True)
+    check_expr = fields.Text('Expression to chec', required=False, help="Input: obj/object - return False for error, return None/True for ok, or raise Exception or return a string")
+    fix_expr= fields.Char('Def to fix error', required=False)
+    model_id = fields.Many2one('ir.model', string="Model", required=True)
     enabled = fields.Boolean("Enabled", default=True)
     errors = fields.Integer("Count Errors")
     domain = fields.Text('Domain')
@@ -66,124 +64,87 @@ class DataPolice(models.Model):
             if recps != (rec.recipients or ''):
                 rec.recipients = recps
 
+    @api.model
+    def _exec_get_result(self, code, globals_dict):
+        code = code.strip()
+        code = code.splitlines()
+        if code and code[-1].startswith(" ") or code[-1].startswith("\t"):
+            code.append("True")
+        code[-1] = "return " + code[-1]
+        code = "\n".join(["  " + x for x in code])
+        wrapper = (
+            "def __wrap():\n" f"{code}\n\n" "result_dict['result'] = __wrap()"
+        )
+        result_dict = {}
+        globals_dict["result_dict"] = result_dict
+        exec(wrapper, globals_dict)
+        return result_dict.get("result")
 
-    def run(self):
+    def _fetch_objects(self):
         self.ensure_one()
-        all_errors = {}
+        obj =self.env[self.model_id.model]
+        if self.domain:
+            instances = obj.search(self.domain)
+        else:
+            instances = self.exec_get_result(self.fetch_expr, {'model': obj, 'obj': obj})
+        instances = instances.with_context(prefetch_fields=False)
 
-        def format(x):
-            try:
-                if not ('model' in x and 'res_id'):
-                    raise Exception()
-            except Exception:
-                return str(x)
+    def _run_code(self, instance, expr):
+        try:
+            result = self.exec_get_result(self.check_exp, {'obj': instance'})
+            if result is None or result is True:
+                result = True
             else:
-                return u'{}#{}: {}'.format(
-                    x['model'],
-                    x['res_id'],
-                    x['text'],
-                )
+                if isinstance(result, str):
+                    exception = result
+                result = False
+        except Exception as e:
+            exception = str(e)
+            result = False
 
-        for dp in self:
-            obj = self.env[dp.model]
-            errors = []
-            try:
-                if dp.src_model and dp.checkdef:
-                    objects = getattr(self.env[dp.src_model], dp.checkdef)().with_context(prefetch_fields=False)
-                else:
-                    objects = obj.with_context(active_test=False, prefetch_fields=False).search(dp.domain and eval(dp.domain) or [])
-            except Exception:
-                if self.env.context.get('from_ui', False):
-                    raise
-                objects = []
-                msg = traceback.format_exc()
-                errors.append({
-                    'res_id': 0,
-                    'res_model': dp.model,
-                    'text': msg,
-                })
+        return {
+            'ok': result,
+            'exception': exception,
+        }
 
-            for idx, obj in enumerate(objects, 1):
-                _logger.debug(f"Checking {dp.name} {idx} of {len(objects)}")
-                instance_name = "n/a"
-                instance_name = self.env["data.police.formatter"].do_format(obj)
+    def _make_checks(self, instances):
+        errors = []
+        for idx, obj in enumerate(objects, 1):
+            _logger.debug(f"Checking {dp.name} {idx} of {len(objects)}")
+            instance_name = self.env["data.police.formatter"].do_format(obj)
+            res = self.run_code(obj, self.check_expr)
+            res['tried_to_fix'] = False
 
-                def run_check():
-                    exception = ""
-                    result = False
-                    self = obj  # for the expression # NOQA
+            if not res['ok'] and self.fix_expr:
+                res_fix = self.run_code(obj, self.fix_expr)
+                res['tried_to_fix'] = True
+                res['fix_result'] = res_fix
 
-                    if dp.expr:
-                        try:
-                            result = eval(dp.expr)
-                        except Exception as e:
-                            exception = str(e)
-                    else:
-                        try:
-                            result = getattr(obj, dp.checkdef)()
-                            if isinstance(result, list) and len(result) == 1:
-                                if isinstance(result[0], bool):
-                                    # [True] by @api.one
-                                    result = result[0]
-                                elif result[0] is None:
-                                    result = True
-                        except Exception as e:
-                            exception = str(e)
-
-                    not_ok = result is False or (result and not (result is True)) or exception
-                    if not exception and isinstance(result, str):
-                        exception = result
-
-                    return {
-                        'ok': not not_ok,
-                        'exception': exception,
-                    }
-
-                if dp.src_model:
-                    ok = {
-                        'ok': False,
-                        'exception': False,
-                    }
-                else:
-                    ok = run_check()
-
-                    if not ok['ok']:
-
-                        if dp.fixdef:
-                            fixed = False
-                            try:
-                                getattr(obj, dp.fixdef)()
-                                fixed = True
-                            except Exception:
-                                msg = traceback.format_exc()
-                                _logger.error(msg, exc_info=True)
-
-                            if fixed:
-                                ok = run_check()
-
-                if not ok['ok']:
-                    text = u"; ".join(x for x in [instance_name, ok.get('exception', '') or ''] if x)
-                    errors += [{
+                if not res['ok'] and (not res['tried_to_fix'] or not res['fix_result']['ok']):
+                    text = u"; ".join(filter(bool, [instance_name, res.get('exception', ''), res.get('fix_result', {}).get('exception')]))
+                    _logger.error(f"Data Police {dp.name}: not ok at {obj._name} {obj.id} {text}")
+                    yield {
                         'model': obj._name,
                         'res_id': obj.id,
                         'text': text,
-                    }]
-                    try:
-                        _logger.error(f"Data Police {dp.name}: not ok at {obj._name} {obj.id} {text}")kj
-                    except Exception:
-                        pass
+                    }
+                    self.env.cr.commit()
 
-            dp.write({'errors': len(errors)})
-            all_errors[dp] = errors
-            dp.write({'last_errors': '\n'.join(format(x) for x in errors)})
+    def run(self):
+        for police in self:
+            errors = []
 
+            instances_to_check = police._fetch_objects()
+            errors = police._make_checks(instances_to_check)
+            police.errors = len(errors)
+            police.last_errors = json.dumps(errors, indent=4)
+            self.env.cr.commit()
+
+    def _get_all_email_recipients(self):
         def str2mails(s):
             s = s or ''
             s = s.replace(",", ";")
             return [x.lower() for x in s.split(";") if x]
-
-        dps = all_errors.keys()
-
         dp_recipients = []
         for dp in dps:
             if dp.recipients:
@@ -193,31 +154,44 @@ class DataPolice(models.Model):
 
         mail_to = ','.join(set(dp_recipients))
 
-        text = ""
-        for dp in dps:
-            errors = all_errors[dp]
-            if not errors:
-                continue
-            text += u"<h2>{}</h2>".format(dp.name)
-            text += "<ul>"
-            small_text = text
-            for i, error in enumerate(sorted(errors, key=lambda e: (e.get('model', False), e.get('res_id', False)), reverse=True)):
-                if 'model' in error and 'res_id' in error:
-                    url = self.env['ir.config_parameter'].get_param('web.base.url')
-                    url += "#model=" + error['model'] + "&id=" + str(error['res_id'])
-                    link = u"<a href='{}'>{}</a>".format(url, error['text'])
-                    appendix = u"<li>{}</li>\n".format(link)
-                else:
-                    appendix = u"<li>{}</li>\n".format(error)
-                text += appendix
-                if i < 50:
-                    small_text += appendix
+        return mail_to
 
-            text += "</ul>"
-            small_text += "</ul>"
+    def _get_error_text(self):
+        self.ensure_one()
+        errors = json.loads(dp.last_errors)
+        if not errors:
+            name = "Success: #{self.name}"
+            return name, name
+        text += u"<h2>{}</h2>".format(dp.name)
+        text += "<ul>"
+        small_text = text
+        for i, error in enumerate(sorted(errors, key=lambda e: (e.get('model', False), e.get('res_id', False)), reverse=True)):
+            if 'model' in error and 'res_id' in error:
+                url = self.env['ir.config_parameter'].get_param('web.base.url')
+                url += "#model=" + error['model'] + "&id=" + str(error['res_id'])
+                link = u"<a href='{}'>{}</a>".format(url, error['text'])
+                appendix = u"<li>{}</li>\n".format(link)
+            else:
+                appendix = u"<li>{}</li>\n".format(error)
+            text += appendix
+            if i < 50:
+                small_text += appendix
+
+        text += "</ul>"
+        small_text += "</ul>"
+        return small_text, text
+
+    def _send_mails(self):
+        dps = all_errors.keys()
+        mail_to = self._get_all_email_recipients()
+
+        text, small_text = ""
+        for dp in dps:
+            new_small_text, new_text = self._get_error_text()
+            text += new_text
+            small_text += new_small_text
 
         if text:
-
             text = base64.encodestring(text.encode("utf-8"))
             self.env["mail.mail"].create({
                 'auto_delete': True,

@@ -27,7 +27,7 @@ class CronjobGroup(models.Model):
     def run_by_cron(self):
         self.ensure_one()
 
-        for police in self.police_ids.filtered(lambda x: x.enabled):
-            police.run()
-            self.env.cr.commit()
+        polices = self.police_ids.filtered(lambda x: x.enabled)
+        polices.run()
+        polices._send_mails()
         return True
