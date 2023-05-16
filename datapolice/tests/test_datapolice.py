@@ -17,15 +17,17 @@ from odoo.exceptions import UserError, RedirectWarning, ValidationError, AccessE
 class TestDatapolice(TransactionCase):
     def test_check_expr(self):
         partner1 = self.env["res.partner"].create({"name": "partner1"})
+        group1 = self.env['datapolice.cronjob.group'].create({})
         police = self.env["data.police"].create(
             {
                 "name": "police1",
                 "model_id": self.env.ref("base.model_res_partner").id,
                 "check_expr": ("obj.name != 'partner1'"),
+                "user_ids": self.env.user.ids,
+                'cronjob_group_id': group1.id,
             }
         )
 
-        group1 = self.env['datapolice.cronjob.group'].create({
-        })
         errors = police.run_single_instance(partner1)
         self.assertEqual(len(errors), 1)
+        police._send_mail_for_single_instance(partner1, errors)

@@ -112,7 +112,7 @@ class DataPolice(models.Model):
             res["tried_to_fix"] = False
 
             def pushup(text):
-                if not res['ok']:
+                if not res["ok"]:
                     yield {
                         "model": obj._name,
                         "res_id": obj.id,
@@ -120,7 +120,9 @@ class DataPolice(models.Model):
                     }
 
             if not res["ok"] and self.fix_expr:
-                res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(obj, self.fix_expr)
+                res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(
+                    obj, self.fix_expr
+                )
                 res["tried_to_fix"] = True
                 res["fix_result"] = res_fix
 
@@ -143,8 +145,8 @@ class DataPolice(models.Model):
                     yield from pushup(text)
                     self.env.cr.commit()
 
-            elif not res['ok']:
-                yield from pushup(res['exception'])
+            elif not res["ok"]:
+                yield from pushup(res["exception"])
 
     def run_single_instance(self, instance):
         self.ensure_one()
@@ -178,9 +180,8 @@ class DataPolice(models.Model):
 
         return mail_to
 
-    def _get_error_text(self):
+    def _get_error_text(self, errors):
         self.ensure_one()
-        errors = json.loads(self.last_errors)
         if not errors:
             name = "Success: #{self.name}"
             return name, name
@@ -210,7 +211,7 @@ class DataPolice(models.Model):
 
     def _send_mail_for_single_instance(self, instance, errors):
         mail_to = self._get_all_email_recipients()
-        new_small_text, new_text = self._get_error_text()
+        new_small_text, new_text = self._get_error_text(errors)
         by_email = {}
         for email in mail_to.split(","):
             by_email.setdefault(email, {"text": "", "small_text": ""})
@@ -223,7 +224,8 @@ class DataPolice(models.Model):
         by_email = {}
         for dp in self:
             mail_to = dp._get_all_email_recipients()
-            new_small_text, new_text = self._get_error_text()
+            errors = json.loads(dp.last_errors)
+            new_small_text, new_text = self._get_error_text(errors)
 
             for email in mail_to.split(","):
                 by_email.setdefault(email, {"text": "", "small_text": ""})
@@ -232,11 +234,10 @@ class DataPolice(models.Model):
         self._send_mail_technically(by_email)
 
     def _send_mail_technically(self, by_email, subject=None):
-
         for email, texts in by_email.items():
             if not texts["text"]:
                 continue
-            text = base64.encodestring(texts["text"].encode("utf-8"))
+            text = base64.b64encode(texts["text"].encode("utf-8"))
             self.env["mail.mail"].create(
                 {
                     "auto_delete": True,
@@ -250,7 +251,6 @@ class DataPolice(models.Model):
                             0,
                             {
                                 "datas": text,
-                                "datas_fname": "data_police.html",
                                 "name": "data_police.html",
                             },
                         ]
