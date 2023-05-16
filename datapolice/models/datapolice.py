@@ -53,13 +53,6 @@ class DataPolice(models.Model):
             if not rec.checkdef and not rec.expr:
                 raise ValidationError("Either provide expression or check-function")
 
-    def run_fix(self):
-        self.ensure_one()
-        if not self.fixdef:
-            return
-
-        self.with_context(datapolice_run_fixdef=True).run()
-
     @api.model
     def create(self, values):
         if "def" in values.keys():
@@ -126,15 +119,14 @@ class DataPolice(models.Model):
         }
 
     def _make_checks(self, instances):
-        errors = []
-        for idx, obj in enumerate(objects, 1):
-            _logger.debug(f"Checking {dp.name} {idx} of {len(objects)}")
+        for idx, obj in enumerate(instances, 1):
+            _logger.debug(f"Checking {self.name} {idx} of {len(instances)}")
             instance_name = self.env["data.police.formatter"].do_format(obj)
             res = self.run_code(obj, self.check_expr)
             res["tried_to_fix"] = False
 
             if not res["ok"] and self.fix_expr:
-                res_fix = self.run_code(obj, self.fix_expr)
+                res_fix = self.with_context(datapolice_run_fixdef=True).run_code(obj, self.fix_expr)
                 res["tried_to_fix"] = True
                 res["fix_result"] = res_fix
 
@@ -152,7 +144,7 @@ class DataPolice(models.Model):
                         )
                     )
                     _logger.error(
-                        f"Data Police {dp.name}: not ok at {obj._name} {obj.id} {text}"
+                        f"Data Police {self.name}: not ok at {obj._name} {obj.id} {text}"
                     )
                     yield {
                         "model": obj._name,
@@ -160,6 +152,12 @@ class DataPolice(models.Model):
                         "text": text,
                     }
                     self.env.cr.commit()
+
+    def run_single_instance(self, instance):
+        self.ensure_one()
+        errors = self._make_checks(instance)
+        errors = list(filter(bool, map(lambda x: x['text'], errors)))
+        return errors
 
     def run(self):
         for police in self:
@@ -194,8 +192,7 @@ class DataPolice(models.Model):
         if not errors:
             name = "Success: #{self.name}"
             return name, name
-        text += "<h2>{}</h2>".format(self.name)
-        text += "<ul>"
+        text += f"<h2>{self.name}</h2><ul>"
         small_text = text
         for i, error in enumerate(
             sorted(
@@ -258,7 +255,6 @@ class DataPolice(models.Model):
         return True
 
     def show_errors(self):
-        obj = self.env[self.model_id.model]
         errors = json.loads(self.last_errors)
         ids = [x["res_id"] for x in errors if "res_id" in x]
 
