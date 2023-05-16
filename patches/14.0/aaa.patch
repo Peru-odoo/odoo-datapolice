@@ -1,0 +1,137 @@
+From 4676c739030e5dc23acbbe3194eee264dd87ad11 Mon Sep 17 00:00:00 2001
+From: Marc Wimmer <marc@itewimmer.de>
+Date: Tue, 16 May 2023 14:14:29 +0200
+Subject: [PATCH] for patch
+
+---
+ datapolice/models/datapolice.py           | 13 ++++++-----
+ datapolice/models/datapolice_crongroup.py | 28 ++++++++++++++---------
+ datapolice/tests/test_datapolice.py       |  2 ++
+ 3 files changed, 26 insertions(+), 17 deletions(-)
+
+diff --git a/datapolice/models/datapolice.py b/datapolice/models/datapolice.py
+index 00a64bd13..9722dfaf7 100644
+--- a/datapolice/models/datapolice.py
++++ b/datapolice/models/datapolice.py
+@@ -112,7 +112,7 @@ class DataPolice(models.Model):
+             res["tried_to_fix"] = False
+ 
+             def pushup(text):
+-                if not res['ok']:
++                if not res["ok"]:
+                     yield {
+                         "model": obj._name,
+                         "res_id": obj.id,
+@@ -120,7 +120,9 @@ class DataPolice(models.Model):
+                     }
+ 
+             if not res["ok"] and self.fix_expr:
+-                res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(obj, self.fix_expr)
++                res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(
++                    obj, self.fix_expr
++                )
+                 res["tried_to_fix"] = True
+                 res["fix_result"] = res_fix
+ 
+@@ -143,8 +145,8 @@ class DataPolice(models.Model):
+                     yield from pushup(text)
+                     self.env.cr.commit()
+ 
+-            elif not res['ok']:
+-                yield from pushup(res['exception'])
++            elif not res["ok"]:
++                yield from pushup(res["exception"])
+ 
+     def run_single_instance(self, instance):
+         self.ensure_one()
+@@ -210,7 +212,7 @@ class DataPolice(models.Model):
+ 
+     def _send_mail_for_single_instance(self, instance, errors):
+         mail_to = self._get_all_email_recipients()
+-        new_small_text, new_text = self._get_error_text()
++        new_small_text, new_text = self._get_error_text(errors)
+         by_email = {}
+         for email in mail_to.split(","):
+             by_email.setdefault(email, {"text": "", "small_text": ""})
+@@ -232,7 +234,6 @@ class DataPolice(models.Model):
+         self._send_mail_technically(by_email)
+ 
+     def _send_mail_technically(self, by_email, subject=None):
+-
+         for email, texts in by_email.items():
+             if not texts["text"]:
+                 continue
+diff --git a/datapolice/models/datapolice_crongroup.py b/datapolice/models/datapolice_crongroup.py
+index 8874f8537..e76c3f8ca 100644
+--- a/datapolice/models/datapolice_crongroup.py
++++ b/datapolice/models/datapolice_crongroup.py
+@@ -1,27 +1,33 @@
+ from odoo import _, api, fields, models, SUPERUSER_ID
+ from odoo.exceptions import UserError, RedirectWarning, ValidationError
++
++
+ class CronjobGroup(models.Model):
+-    _name = 'datapolice.cronjob.group'
+-    _rec_name = 'cronjob_id'
++    _name = "datapolice.cronjob.group"
++    _rec_name = "cronjob_id"
+ 
+     cronjob_id = fields.Many2one("ir.cron", string="Cronjob", required=False)
+-    police_ids = fields.One2many("data.police", 'cronjob_group_id', string="Polices")
++    police_ids = fields.One2many("data.police", "cronjob_group_id", string="Polices")
+ 
+     def _make_cron(self):
+         self.ensure_one()
+         if self.cronjob_id:
+             return
+ 
+-        self.cronjob_id = self.env['ir.cron'].create({
+-            'name': f'datapolice crongroup #{self.id}',
+-            'model_id': self.env.ref('datapolice.model_datapolice_cronjob_group').id,
+-            'code': f'model.browse({self.id}).run_by_cron()',
+-        })
++        self.cronjob_id = self.env["ir.cron"].create(
++            {
++                "name": f"datapolice crongroup #{self.id}",
++                "model_id": self.env.ref(
++                    "datapolice.model_datapolice_cronjob_group"
++                ).id,
++                "code": f"model.browse({self.id}).run_by_cron()",
++            }
++        )
+ 
+     @api.model
+     def create(self, vals):
+-        if isinstance(vals.get('cronjob_id'), str):
+-            vals.pop('cronjob_id')
++        if isinstance(vals.get("cronjob_id"), str):
++            vals.pop("cronjob_id")
+         res = super().create(vals)
+         res._make_cron()
+         return res
+@@ -32,4 +38,4 @@ class CronjobGroup(models.Model):
+         polices = self.police_ids.filtered(lambda x: x.enabled)
+         polices.run()
+         polices._send_mails()
+-        return True
+\ No newline at end of file
++        return True
+diff --git a/datapolice/tests/test_datapolice.py b/datapolice/tests/test_datapolice.py
+index 6ff946696..772e5cd7d 100644
+--- a/datapolice/tests/test_datapolice.py
++++ b/datapolice/tests/test_datapolice.py
+@@ -22,6 +22,7 @@ class TestDatapolice(TransactionCase):
+                 "name": "police1",
+                 "model_id": self.env.ref("base.model_res_partner").id,
+                 "check_expr": ("obj.name != 'partner1'"),
++                "user_ids": self.env.user.ids,
+             }
+         )
+ 
+@@ -29,3 +30,4 @@ class TestDatapolice(TransactionCase):
+         })
+         errors = police.run_single_instance(partner1)
+         self.assertEqual(len(errors), 1)
++        police._send_mails()
+-- 
+2.34.1
