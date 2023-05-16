@@ -55,9 +55,10 @@ class DataPolice(models.Model):
 
     def _make_activity(self, instance):
         dt = arrow.utcnow().shift(days=self.activity_deadline_days).datetime
+        instance_model = self.env['ir.model'].sudo().search([('model', '=', instance._name)])
         data = {
             "activity_type_id": self.activity_type_id.id,
-            "res_model_id": instance._name,
+            "res_model_id": instance_model.id,
             "res_id": instance.id,
             "automated": True,
             "date_deadline": fields.Datetime.to_string(dt),
@@ -68,7 +69,7 @@ class DataPolice(models.Model):
 
         if not self.env["mail.activity"].search_count(
             [
-                ("res_id", "=", instance.id),
+                ("res_id", "=", data['res_id']),
                 ("res_model_id", "=", data["res_model_id"]),
                 ("activity_type_id", "=", data["activity_type_id"]),
             ]
