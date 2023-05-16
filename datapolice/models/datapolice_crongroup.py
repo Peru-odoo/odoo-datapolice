@@ -20,6 +20,8 @@ class CronjobGroup(models.Model):
 
     @api.model
     def create(self, vals):
+        if isinstance(vals.get('cronjob_id'), str):
+            vals.pop('cronjob_id')
         res = super().create(vals)
         res._make_cron()
         return res

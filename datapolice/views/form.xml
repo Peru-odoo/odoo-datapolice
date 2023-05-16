@@ -7,7 +7,7 @@
       <field name="arch" type="xml">
         <form string="" version="7.0">
           <header>
-            <button name="run" string="Run" type="object" icon="gtk-execute" context="{'from_ui': True}"/>
+            <button name="run" string="Run" type="object" context="{'from_ui': True}"/>
           </header>
           <sheet>
             <div class="oe_button_box" name="button_box">
@@ -19,10 +19,20 @@
               </button>
             </div>
             <group col="4">
+              <field name="name" required='1'/>
+              <field name="model_id" required='1'/>
               <field name="cronjob_group_id"/>
-              <field name="name"/>
             </group>
             <notebook>
+              <page string="Fetch Data">
+                <group>
+                  <field name="domain" placeholder="[('name', 'ilike', 'its me')]" attrs="{'invisible': [('fetch_expr', 'not in', [False, ''])]}"/>
+                  <field name="fetch_expr" attrs="{'invisible': [('domain', 'not in', [False, ''])]}" widget='ace' options="{'mode': 'python'}"/>
+                  <div attrs="{'invisible': [('domain', 'not in', [False, ''])]}">
+                  Available: model
+                  </div>
+                </group>
+              </page>
               <page string="Triggers">
                 <field name="trigger_ids">
                   <tree editable="bottom">
@@ -33,21 +43,11 @@
                   </tree>
                 </field>
               </page>
-              <page string="Fetch Data">
-                <group>
-                  <field name="model_id" required='1'/>
-                  <field name="domain" placeholder="[('name', 'ilike', 'its me')]" attrs="{'invisible': [('fetch_expr', '!=', False)]}"/>
-                  <field name="fetch_expr" attrs="{'invisible': [('domain', '!=', False)]}"/>
-                  <div attrs="{'invisible': [('domain', '!=', False)]}">
-                  Available: model
-                  </div>
-                </group>
-              </page>
               <page string="Check">
-                <field name="check_expr" widget="ace"/>
+                <field name="check_expr" widget="ace" options="{'mode': 'python'}"/>
               </page>
               <page string="Fix">
-                <field name="fix_expr" widget="ace"/>
+                <field name="fix_expr" widget="ace" options="{'mode': 'python'}"/>
               </page>
               <page string="Assignees">
                 <group>

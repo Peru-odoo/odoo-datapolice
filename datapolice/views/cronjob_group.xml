@@ -9,6 +9,23 @@
 				</tree>
 			</field>
 		</record>
+		<record id="view_datapolice_cronjob_group_form" model="ir.ui.view">
+			<field name="name">datapolice.cronjob.group form</field>
+			<field name="model">datapolice.cronjob.group</field>
+			<field name="arch" type="xml">
+				<form string="">
+					<header></header>
+					<sheet>
+						<group string="" col="2">
+							<field name="cronjob_id" />
+						</group>
+						<group string="Polices">
+							<field name="police_ids" nolabel="1"/>
+						</group>
+					</sheet>
+				</form>
+			</field>
+		</record>
 
 	</data>
 </odoo>

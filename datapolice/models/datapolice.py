@@ -45,21 +45,6 @@ class DataPolice(models.Model):
     def toggle_active(self):
         self.active = not self.active
 
-    @api.constrains("src_model", "domain", "checkdef", "expr")
-    def check_model_domain(self):
-        for rec in self:
-            if rec.domain and rec.src_model:
-                raise ValidationError("Either provide src_model OR domain")
-            if not rec.checkdef and not rec.expr:
-                raise ValidationError("Either provide expression or check-function")
-
-    @api.model
-    def create(self, values):
-        if "def" in values.keys():
-            raise Exception("Please use checkdef instead of def!!!")
-        result = super(DataPolice, self).create(values)
-        return result
-
     @api.constrains("recipients")
     def _check_recipients(self):
         for rec in self:
