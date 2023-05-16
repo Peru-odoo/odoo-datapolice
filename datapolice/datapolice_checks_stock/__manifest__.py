@@ -1,7 +1,7 @@
 {   'active': False,
     'application': False,
     'author': 'Marc Wimmer (marc@itewimmer.de)',
-    'auto_install': True,
+    'auto_install': False,
     'css': [],
     'data': ['models/basicchecks.xml'],
     'demo': [],

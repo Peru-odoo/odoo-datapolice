@@ -4,7 +4,7 @@
     <record model="data.police" id="supplier_info">
       <field name="model">product.product</field>
       <field name="expr">bool(obj.seller_ids)</field>
-	  <field name="chekdef" eval="False" />
+      <field name="chekdef" eval="False" />
       <field name="name">Missing supplier infos</field>
       <field name="domain">[('purchase_ok', '=', True), ('type', '=', 'product'), ('route_ids.pull_ids.action', '=', 'buy')]</field>
     </record>
@@ -16,8 +16,8 @@
     </record>
     <record model="data.police" id="check_negative_delay">
       <field name="model">product.supplierinfo</field>
-	  <field name="checkdef" eval="False" />
-	  <field name="expr">self.delay >= 0</field>
+      <field name="checkdef" eval="False" />
+      <field name="expr">self.delay >= 0</field>
       <field name="name">Negative Delay</field>
       <field name="domain">[]</field>
     </record>
