@@ -14,5 +14,13 @@
       <field name="view_mode">tree</field>
     </record>
     <menuitem parent="menu_root" id="menu_formatters" action="formatters_action"/>
+
+
+    <record id='act_cronjob_groups' model='ir.actions.act_window'>
+      <field name='name'>Cronjobs</field>
+      <field name='res_model'>datapolice.cronjob.group</field>
+      <field name='view_mode'>tree</field>
+    </record>
+    <menuitem parent="menu_root" id="menu_datapolice.cronjob.group" action="act_cronjob_groups"/>
   </data>
 </odoo>

@@ -5,23 +5,28 @@ import tempfile
 import traceback
 from datetime import datetime
 from odoo.exceptions import UserError, RedirectWarning, ValidationError
+import logging
+
+_logger = logging.getLogger("datapolice")
 
 class DataPolice(models.Model):
     _name = 'data.police'
 
     active = fields.Boolean(default=True)
-    name = fields.Char('Name', size=256, required=True, translate=True)
-    checkdef = fields.Char('Def to call', size=128, required=False)
-    fixdef = fields.Char('Def to fix error', size=128, required=False)
-    expr = fields.Text("Expression (using obj)", )
+    name = fields.Char('Name', required=True, translate=True)
+    fetch_expr = fields.Text("Fetch Expr", help="If given then used; return records, otherwise domain is used with model")
+    check_expr = fields.Text('Expression to chec', required=False, help="Input: obj/object - return False for error, return None/True for ok, or raise Exception")
+    fixdef = fields.Char('Def to fix error', required=False)
     model = fields.Char('Model', size=128, required=True)
-    src_model = fields.Char("Source Model", help="if given, then the checkdef is called at this model. Expects erroneous items of type 'model'")
     enabled = fields.Boolean("Enabled", default=True)
     errors = fields.Integer("Count Errors")
     domain = fields.Text('Domain')
     recipients = fields.Char("Mail-Recipients", size=1024)
     user_ids = fields.Many2many('res.users', string="Recipients (users)")
+    inform_current_user_immediately  = fields.Boolean("Inform current user immediately", default=False)
     last_errors = fields.Text("Last Error Log")
+    cronjob_group_id = fields.Many2one("datapolice.cronjob.group", string="Cronjob Group")
+    method_triggers = fields.Many2many("method_hook.trigger", domain=[('model', '=', model)])
 
     def toggle_active(self):
         self.active = not self.active
@@ -45,23 +50,25 @@ class DataPolice(models.Model):
     def create(self, values):
         if 'def' in values.keys():
             raise Exception("Please use checkdef instead of def!!!")
-        if 'recipients' in values:
-            if values['recipients']:
-                values['recipients'] = values['recipients'].replace(",", ";").replace(" ", "")
         result = super(DataPolice, self).create(values)
         return result
 
-    def write(self, values):
-        if 'recipients' in values:
-            if values['recipients']:
-                values['recipients'] = values['recipients'].replace(",", ";").replace(" ", "")
-        result = super(DataPolice, self).write(values)
-        return result
+    @api.constrains("recipients")
+    def _check_recipients(self):
+        for rec in self:
+            recps = rec.recipients or ''
+            recps = recps.replace(";", ",")
+            def convert(x):
+                x = x.strip()
+                return x
+            recps = list(map(convert, recps.split(",")))
+            recps = ','.join(recps)
+            if recps != (rec.recipients or ''):
+                rec.recipients = recps
+
 
     def run(self):
-        if not self:
-            self = self.search([('enabled', '=', True)])
-
+        self.ensure_one()
         all_errors = {}
 
         def format(x):
@@ -96,8 +103,8 @@ class DataPolice(models.Model):
                     'text': msg,
                 })
 
-            for idx, obj in enumerate(objects):
-                self._logger.debug("Checking {} {} of {}".format(dp.name, idx + 1, len(objects)))
+            for idx, obj in enumerate(objects, 1):
+                _logger.debug(f"Checking {dp.name} {idx} of {len(objects)}")
                 instance_name = "n/a"
                 instance_name = self.env["data.police.formatter"].do_format(obj)
 
@@ -149,7 +156,7 @@ class DataPolice(models.Model):
                                 fixed = True
                             except Exception:
                                 msg = traceback.format_exc()
-                                self._logger.error(msg)
+                                _logger.error(msg, exc_info=True)
 
                             if fixed:
                                 ok = run_check()
@@ -162,7 +169,7 @@ class DataPolice(models.Model):
                         'text': text,
                     }]
                     try:
-                        self._logger.error(u"Data Police {}: not ok at {} {} {}".format(dp.name, obj._name, obj.id, text))
+                        _logger.error(f"Data Police {dp.name}: not ok at {obj._name} {obj.id} {text}")kj
                     except Exception:
                         pass
 
