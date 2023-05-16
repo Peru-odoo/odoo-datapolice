@@ -15,7 +15,7 @@ class DataPolice(models.Model):
     fetch_expr = fields.Text("Fetch Expr", help="If given then used; return records, otherwise domain is used with model")
     check_expr = fields.Text('Expression to chec', required=False, help="Input: obj/object - return False for error, return None/True for ok, or raise Exception or return a string")
     fix_expr= fields.Char('Def to fix error', required=False)
-    model_id = fields.Many2one('ir.model', string="Model", required=True)
+    model_id = fields.Many2one('ir.model', string="Model", required=True, ondelete='cascade')
     enabled = fields.Boolean("Enabled", default=True)
     errors = fields.Integer("Count Errors")
     domain = fields.Text('Domain')
@@ -24,7 +24,7 @@ class DataPolice(models.Model):
     inform_current_user_immediately  = fields.Boolean("Inform current user immediately", default=False)
     last_errors = fields.Text("Last Error Log")
     cronjob_group_id = fields.Many2one("datapolice.cronjob.group", string="Cronjob Group")
-    method_triggers = fields.Many2many("method_hook.trigger", domain=[('model', '=', model)])
+    trigger_ids = fields.One2many("datapolice.trigger", 'datapolice_id', ondelete='cascade')
 
     def toggle_active(self):
         self.active = not self.active
@@ -91,7 +91,7 @@ class DataPolice(models.Model):
 
     def _run_code(self, instance, expr):
         try:
-            result = self.exec_get_result(self.check_exp, {'obj': instance'})
+            result = self.exec_get_result(self.check_exp, {'obj': instance})
             if result is None or result is True:
                 result = True
             else:
@@ -145,6 +145,7 @@ class DataPolice(models.Model):
             s = s or ''
             s = s.replace(",", ";")
             return [x.lower() for x in s.split(";") if x]
+
         dp_recipients = []
         for dp in dps:
             if dp.recipients:
@@ -182,23 +183,28 @@ class DataPolice(models.Model):
         return small_text, text
 
     def _send_mails(self):
-        dps = all_errors.keys()
-        mail_to = self._get_all_email_recipients()
 
         text, small_text = ""
-        for dp in dps:
+        by_email = {}
+        for dp in self:
+            mail_to = dp._get_all_email_recipients()
             new_small_text, new_text = self._get_error_text()
-            text += new_text
-            small_text += new_small_text
 
-        if text:
-            text = base64.encodestring(text.encode("utf-8"))
+            for email in mail_to.split(","):
+                by_email.setdefault(email, {'text': '', 'small_text': ''})
+                by_email[email]['text'] += new_text
+                by_email[email]['small_text'] += new_small_text
+
+        for email, texts in by_email.items9):
+            if not texts['text']:
+                continue
+            text = base64.encodestring(texts['text'].encode("utf-8"))
             self.env["mail.mail"].create({
                 'auto_delete': True,
                 'subject': 'DataPolice Run {}'.format(datetime.now().strftime("%Y-%m-%d")),
-                'body_html': small_text,
-                'body': small_text,
-                'email_to': mail_to,
+                'body_html': texts['small_text'],
+                'body': texts['small_text'],
+                'email_to': email,
                 'attachment_ids': [[0, 0, {
                     'datas': text,
                     'datas_fname': 'data_police.html',
@@ -208,3 +214,32 @@ class DataPolice(models.Model):
             }).send()
 
         return True
+
+    def show_errors(self):
+        obj = self.env[self.model_id.model]
+        errors = json.loads(self.last_errors)
+
+        return {
+            'view_type': 'form',
+            'res_model': self._name,
+            #'res_id': ,
+            #'domain': [],
+            #'views': [(obj.get_formview_id(), 'form'), (False, 'tree')],
+            #'views': [(False, 'tree'), (False, 'form')],
+            'type': 'ir.actions.act_window',
+            'flags': {'form': {
+                'action_buttons': True,  // to work in odoo 11 insert empty <footer /> in form (tested 18.05.2018)
+                #'initial_mode': 'edit'/'view'
+                #'footer_to_buttons': False,
+                #'not_interactiable_on_create': False,
+                #'disable_autofocus': False,
+                #'headless': False,  9.0 and others?
+            }},
+            'options': {
+                # needs module web_extended_actions
+                'hide_breadcrumb': True,
+                'replace_breadcrumb': True,
+                'clear_breadcrumbs': True,
+            },
+            'target': 'current',
+        }
