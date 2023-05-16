@@ -24,5 +24,8 @@ class TestDatapolice(TransactionCase):
                 "check_expr": ("obj.name != 'partner1'"),
             }
         )
+
+        group1 = self.env['datapolice.cronjob.group'].create({
+        })
         errors = police.run_single_instance(partner1)
         self.assertEqual(len(errors), 1)

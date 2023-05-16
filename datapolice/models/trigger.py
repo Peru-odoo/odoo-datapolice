@@ -10,10 +10,12 @@ class Trigger(models.Model):
         errors = self.datapolice_id.run_single_instance(instance)
         errors = ';'.join(errors)
 
-        if instance.inform_current_user_immediately:
+        if self.datapolice_id.inform_current_user_immediately:
             text = (
                 f"Error at {instance.name_get()[0][1]}\n"
                 f"for: {self.datapolice_id.name}\n"
                 f"Errors: {errors}"
             )
             raise ValidationError(text)
+
+        self.datapolice_id._send_mail_for_single_instance(instance, errors)

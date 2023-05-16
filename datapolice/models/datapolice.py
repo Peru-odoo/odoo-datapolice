@@ -223,6 +223,17 @@ class DataPolice(models.Model):
         small_text += "</ul>"
         return small_text, text
 
+    def _send_mail_for_single_instance(self, instance, errors):
+        mail_to = self._get_all_email_recipients()
+        new_small_text, new_text = self._get_error_text()
+        by_email = {}
+        for email in mail_to.split(","):
+            by_email.setdefault(email, {"text": "", "small_text": ""})
+            by_email[email]["text"] = new_text
+            by_email[email]["small_text"] = new_small_text
+        subject = f"DataPolice: {instance.name_get()[0][1]}"
+        self._send_mail_technically(by_email, subject=subject)
+
     def _send_mails(self):
         by_email = {}
         for dp in self:
@@ -233,6 +244,9 @@ class DataPolice(models.Model):
                 by_email.setdefault(email, {"text": "", "small_text": ""})
                 by_email[email]["text"] += new_text
                 by_email[email]["small_text"] += new_small_text
+        self._send_mail_technically(by_email)
+
+    def _send_mail_technically(self, by_email, subject=None):
 
         for email, texts in by_email.items():
             if not texts["text"]:
@@ -241,7 +255,7 @@ class DataPolice(models.Model):
             self.env["mail.mail"].create(
                 {
                     "auto_delete": True,
-                    "subject": f"DataPolice Run {datetime.now()}",
+                    "subject": subject or f"DataPolice Run {datetime.now()}",
                     "body_html": texts["small_text"],
                     "body": texts["small_text"],
                     "email_to": email,
@@ -258,8 +272,6 @@ class DataPolice(models.Model):
                     ],
                 }
             ).send()
-
-        return True
 
     def show_errors(self):
         errors = json.loads(self.last_errors)
