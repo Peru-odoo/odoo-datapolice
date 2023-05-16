@@ -1,4 +1,5 @@
 from odoo import models, fields, api, _
+import arrow
 import json
 import base64
 from datetime import datetime
@@ -45,6 +46,32 @@ class DataPolice(models.Model):
     trigger_ids = fields.One2many(
         "datapolice.trigger", "datapolice_id", ondelete="cascade"
     )
+
+    make_activity = fields.Boolean("Make Activity")
+    activity_type_id = fields.Many2one("mail.activity.type", string="Activity Type")
+    activity_deadline_days = fields.Integer("Activity Deadline Days")j
+    activity_summary = fields.Summary("Activity Summary")
+    activity_user_id = fields.Many2one('res.users', string="Assign Activity User")
+
+    def _make_activity(self, instance):
+        dt = arrow.utcnow().shift(days=self.activity_deadline_days).datetime
+        data = {
+            'activity_type_id': self.activity_type_id.id,
+            'res_model_id': instance._name,
+            'res_id': instance.id,
+            'automated': True,
+            'date_deadline': fields.Datetime.to_string(dt),
+            'summary': self.summary,
+        }
+        if self.activity_user_id:
+            data['user_id'] = self.activity_user_id.id
+
+        if not self.env['mail.activity'].search_count([
+            ('res_id', '=', instance.id),
+            ('res_model_id', '=', data['res_model_id']),
+            ('activity_type_id', '=', data['activity_type_id']),
+        ]):
+            self.env['mail.activity'].create(data)
 
     def toggle_active(self):
         self.active = not self.active

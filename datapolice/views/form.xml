@@ -47,16 +47,18 @@
               </page>
               <page string="Check">
                 <field name="check_expr" widget="ace" options="{'mode': 'python'}"/>
-                  <div>
-                  Available: <b>obj</b><br/>
+                <div>
+                  Available: <b>obj</b>
+                  <br/>
                   Return: True or None for ok; return False or a string with information for an error
-                  </div>
+                </div>
               </page>
               <page string="Fix">
                 <field name="fix_expr" widget="ace" options="{'mode': 'python'}"/>
-                  <div>
-                  Available: <b>obj</b><br/>
-                  </div>
+                <div>
+                  Available: <b>obj</b>
+                  <br/>
+                </div>
               </page>
               <page string="Assignees">
                 <group>
@@ -68,13 +70,23 @@
               <page string="Last Errors">
                 <field name="last_errors" nolabel="1" readonly="1"/>
               </page>
-
+              <page string="Make Activity">
+                <group>
+                  <field name="make_activity"/>
+                </group>
+                <group attrs="{'invisible': [('make_activity', '!=', False)]}">
+                  <field name="activity_type_id"/>
+                  <field name="activity_deadline_days"/>
+                  <field name="activity_summary"/>
+                  <field name="activity_user_id"/>
+                </group>
+              </page>
             </notebook>
 
           </sheet>
           <div class="oe_chatter">
-              <field name="message_follower_ids" widget="mail_followers"/>
-              <field name="message_ids" widget="mail_thread"/>
+            <field name="message_follower_ids" widget="mail_followers"/>
+            <field name="message_ids" widget="mail_thread"/>
           </div>
         </form>
       </field>
