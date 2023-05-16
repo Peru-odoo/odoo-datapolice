@@ -95,14 +95,15 @@ class DataPolice(models.Model):
         if self.domain:
             instances = obj.search(self.domain)
         else:
-            instances = self.exec_get_result(
+            instances = self._exec_get_result(
                 self.fetch_expr, {"model": obj, "obj": obj}
             )
         instances = instances.with_context(prefetch_fields=False)
 
     def _run_code(self, instance, expr):
+        exception = ""
         try:
-            result = self.exec_get_result(self.check_exp, {"obj": instance})
+            result = self._exec_get_result(expr, {"obj": instance})
             if result is None or result is True:
                 result = True
             else:
@@ -122,11 +123,19 @@ class DataPolice(models.Model):
         for idx, obj in enumerate(instances, 1):
             _logger.debug(f"Checking {self.name} {idx} of {len(instances)}")
             instance_name = self.env["data.police.formatter"].do_format(obj)
-            res = self.run_code(obj, self.check_expr)
+            res = self._run_code(obj, self.check_expr)
             res["tried_to_fix"] = False
 
+            def pushup(text):
+                if not res['ok']:
+                    yield {
+                        "model": obj._name,
+                        "res_id": obj.id,
+                        "text": text,
+                    }
+
             if not res["ok"] and self.fix_expr:
-                res_fix = self.with_context(datapolice_run_fixdef=True).run_code(obj, self.fix_expr)
+                res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(obj, self.fix_expr)
                 res["tried_to_fix"] = True
                 res["fix_result"] = res_fix
 
@@ -146,17 +155,15 @@ class DataPolice(models.Model):
                     _logger.error(
                         f"Data Police {self.name}: not ok at {obj._name} {obj.id} {text}"
                     )
-                    yield {
-                        "model": obj._name,
-                        "res_id": obj.id,
-                        "text": text,
-                    }
+                    yield from pushup(text)
                     self.env.cr.commit()
+
+            elif not res['ok']:
+                yield from pushup(res['exception'])
 
     def run_single_instance(self, instance):
         self.ensure_one()
-        errors = self._make_checks(instance)
-        errors = list(filter(bool, map(lambda x: x['text'], errors)))
+        errors = list(self._make_checks(instance))
         return errors
 
     def run(self):
@@ -164,7 +171,7 @@ class DataPolice(models.Model):
             errors = []
 
             instances_to_check = police._fetch_objects()
-            errors = police._make_checks(instances_to_check)
+            errors = list(police._make_checks(instances_to_check))
             police.errors = len(errors)
             police.last_errors = json.dumps(errors, indent=4)
             self.env.cr.commit()
@@ -192,7 +199,7 @@ class DataPolice(models.Model):
         if not errors:
             name = "Success: #{self.name}"
             return name, name
-        text += f"<h2>{self.name}</h2><ul>"
+        text = f"<h2>{self.name}</h2><ul>"
         small_text = text
         for i, error in enumerate(
             sorted(

@@ -57,7 +57,6 @@
                 </group>
               </page>
               <page string="Last Errors">
-                <button type="object" name="run_fix" attrs="{'invisible': ['|', ('last_errors', '=', False), ('fix_expr', '=', False)]}" string="Fix Errors"/>
                 <field name="last_errors" nolabel="1" readonly="1"/>
               </page>
 
