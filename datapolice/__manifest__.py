@@ -14,7 +14,7 @@
                 'security/ir.model.access.csv'],
     'demo': [],
     'demo_xml': [],
-    'depends': ['base', 'method_trigger'],
+    'depends': ['base', 'method_trigger', 'mail'],
     'description': '',
     'installable': True,
     'js': [],

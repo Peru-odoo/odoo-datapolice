@@ -4,11 +4,13 @@ import base64
 from datetime import datetime
 from odoo.exceptions import UserError, RedirectWarning, ValidationError
 import logging
+from odoo.tools.safe_eval import safe_eval
 
 _logger = logging.getLogger("datapolice")
 
 
 class DataPolice(models.Model):
+    _inherit = "mail.thread"
     _name = "data.police"
 
     active = fields.Boolean(default=True)
@@ -28,6 +30,8 @@ class DataPolice(models.Model):
     )
     enabled = fields.Boolean("Enabled", default=True)
     errors = fields.Integer("Count Errors")
+    checked = fields.Integer("Count Checked")
+    ratio = fields.Float("Success Ratio [%]", compute="_compute_success")
     domain = fields.Text("Domain")
     recipients = fields.Char("Mail-Recipients", size=1024)
     user_ids = fields.Many2many("res.users", string="Recipients (users)")
@@ -78,12 +82,14 @@ class DataPolice(models.Model):
         self.ensure_one()
         obj = self.env[self.model_id.model]
         if self.domain:
-            instances = obj.search(self.domain)
+            domain = safe_eval(self.domain)
+            instances = obj.search(domain)
         else:
             instances = self._exec_get_result(
                 self.fetch_expr, {"model": obj, "obj": obj}
             )
         instances = instances.with_context(prefetch_fields=False)
+        return instances
 
     def _run_code(self, instance, expr):
         exception = ""
@@ -105,6 +111,8 @@ class DataPolice(models.Model):
         }
 
     def _make_checks(self, instances):
+        if not self.check_expr:
+            raise ValidationError("Please define a check!")
         for idx, obj in enumerate(instances, 1):
             _logger.debug(f"Checking {self.name} {idx} of {len(instances)}")
             instance_name = self.env["data.police.formatter"].do_format(obj)
@@ -112,12 +120,12 @@ class DataPolice(models.Model):
             res["tried_to_fix"] = False
 
             def pushup(text):
-                if not res["ok"]:
-                    yield {
-                        "model": obj._name,
-                        "res_id": obj.id,
-                        "text": text,
-                    }
+                yield {
+                    "ok": res['ok'],
+                    "model": obj._name,
+                    "res_id": obj.id,
+                    "text": text,
+                }
 
             if not res["ok"] and self.fix_expr:
                 res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(
@@ -145,12 +153,12 @@ class DataPolice(models.Model):
                     yield from pushup(text)
                     self.env.cr.commit()
 
-            elif not res["ok"]:
-                yield from pushup(res["exception"])
+            else:
+                yield from pushup(res["exception"] or "")
 
     def run_single_instance(self, instance):
         self.ensure_one()
-        errors = list(self._make_checks(instance))
+        errors = list(filter(lambda x: not x["ok"], self._make_checks(instance)))
         return errors
 
     def run(self):
@@ -158,10 +166,26 @@ class DataPolice(models.Model):
             errors = []
 
             instances_to_check = police._fetch_objects()
-            errors = list(police._make_checks(instances_to_check))
+            results = list(police._make_checks(instances_to_check))
+            errors = list(filter(lambda x: not x["ok"], results))
+            police.checked = len(results)
             police.errors = len(errors)
             police.last_errors = json.dumps(errors, indent=4)
+            police._post_status_message()
             self.env.cr.commit()
+
+    @api.depends("errors", "checked")
+    def _compute_success(self):
+        for rec in self:
+            if rec.checked:
+                rec.ratio = 100 * (1 - rec.errors / rec.checked)
+            else:
+                rec.ratio = 0
+
+    def _post_status_message(self):
+        for rec in self:
+            body = f"Checked: {self.checked}\nErrors: {self.errors}\nSucecss-Ratio: {rec.ratio:.2f}%"
+            rec.message_post(body=body)
 
     def _get_all_email_recipients(self):
         def str2mails(s):

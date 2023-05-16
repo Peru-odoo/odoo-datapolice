@@ -13,6 +13,7 @@
           <field name="enabled"/>
           <field name="domain"/>
           <field name="errors"/>
+          <field name="ratio"/>
           <field name="user_ids"/>
           <field name="recipients"/>
           <field name="trigger_ids"/>
