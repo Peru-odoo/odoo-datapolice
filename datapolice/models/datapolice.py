@@ -147,7 +147,7 @@ class DataPolice(models.Model):
             return [x.lower() for x in s.split(";") if x]
 
         dp_recipients = []
-        for dp in dps:
+        for dp in self:
             if dp.recipients:
                 dp_recipients += str2mails(dp.recipients)
             if dp.user_ids:
@@ -159,11 +159,11 @@ class DataPolice(models.Model):
 
     def _get_error_text(self):
         self.ensure_one()
-        errors = json.loads(dp.last_errors)
+        errors = json.loads(self.last_errors)
         if not errors:
             name = "Success: #{self.name}"
             return name, name
-        text += u"<h2>{}</h2>".format(dp.name)
+        text += u"<h2>{}</h2>".format(self.name)
         text += "<ul>"
         small_text = text
         for i, error in enumerate(sorted(errors, key=lambda e: (e.get('model', False), e.get('res_id', False)), reverse=True)):
@@ -184,7 +184,6 @@ class DataPolice(models.Model):
 
     def _send_mails(self):
 
-        text, small_text = ""
         by_email = {}
         for dp in self:
             mail_to = dp._get_all_email_recipients()
@@ -195,7 +194,7 @@ class DataPolice(models.Model):
                 by_email[email]['text'] += new_text
                 by_email[email]['small_text'] += new_small_text
 
-        for email, texts in by_email.items9):
+        for email, texts in by_email.items):
             if not texts['text']:
                 continue
             text = base64.encodestring(texts['text'].encode("utf-8"))
@@ -218,28 +217,14 @@ class DataPolice(models.Model):
     def show_errors(self):
         obj = self.env[self.model_id.model]
         errors = json.loads(self.last_errors)
+        ids = [x['res_id'] for x in errors if 'res_id' in x]
 
         return {
+            'name': f"Errors of {self.name}",
             'view_type': 'form',
             'res_model': self._name,
-            #'res_id': ,
-            #'domain': [],
-            #'views': [(obj.get_formview_id(), 'form'), (False, 'tree')],
-            #'views': [(False, 'tree'), (False, 'form')],
+            'domain': [('id', 'in', ids)],
+            'views': [(False, 'tree'), (False, 'form')],
             'type': 'ir.actions.act_window',
-            'flags': {'form': {
-                'action_buttons': True,  // to work in odoo 11 insert empty <footer /> in form (tested 18.05.2018)
-                #'initial_mode': 'edit'/'view'
-                #'footer_to_buttons': False,
-                #'not_interactiable_on_create': False,
-                #'disable_autofocus': False,
-                #'headless': False,  9.0 and others?
-            }},
-            'options': {
-                # needs module web_extended_actions
-                'hide_breadcrumb': True,
-                'replace_breadcrumb': True,
-                'clear_breadcrumbs': True,
-            },
             'target': 'current',
         }
