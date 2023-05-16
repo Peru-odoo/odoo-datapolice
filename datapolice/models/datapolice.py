@@ -51,27 +51,29 @@ class DataPolice(models.Model):
     activity_type_id = fields.Many2one("mail.activity.type", string="Activity Type")
     activity_deadline_days = fields.Integer("Activity Deadline Days")
     activity_summary = fields.Char("Activity Summary")
-    activity_user_id = fields.Many2one('res.users', string="Assign Activity User")
+    activity_user_id = fields.Many2one("res.users", string="Assign Activity User")
 
     def _make_activity(self, instance):
         dt = arrow.utcnow().shift(days=self.activity_deadline_days).datetime
         data = {
-            'activity_type_id': self.activity_type_id.id,
-            'res_model_id': instance._name,
-            'res_id': instance.id,
-            'automated': True,
-            'date_deadline': fields.Datetime.to_string(dt),
-            'summary': self.activity_summary,
+            "activity_type_id": self.activity_type_id.id,
+            "res_model_id": instance._name,
+            "res_id": instance.id,
+            "automated": True,
+            "date_deadline": fields.Datetime.to_string(dt),
+            "summary": self.activity_summary,
         }
         if self.activity_user_id:
-            data['user_id'] = self.activity_user_id.id
+            data["user_id"] = self.activity_user_id.id
 
-        if not self.env['mail.activity'].search_count([
-            ('res_id', '=', instance.id),
-            ('res_model_id', '=', data['res_model_id']),
-            ('activity_type_id', '=', data['activity_type_id']),
-        ]):
-            self.env['mail.activity'].create(data)
+        if not self.env["mail.activity"].search_count(
+            [
+                ("res_id", "=", instance.id),
+                ("res_model_id", "=", data["res_model_id"]),
+                ("activity_type_id", "=", data["activity_type_id"]),
+            ]
+        ):
+            self.env["mail.activity"].create(data)
 
     def toggle_active(self):
         self.active = not self.active
@@ -148,7 +150,7 @@ class DataPolice(models.Model):
 
             def pushup(text):
                 yield {
-                    "ok": res['ok'],
+                    "ok": res["ok"],
                     "model": obj._name,
                     "res_id": obj.id,
                     "text": text,
@@ -183,9 +185,18 @@ class DataPolice(models.Model):
             else:
                 yield from pushup(res["exception"] or "")
 
+    def _make_activity_for_error(self, error):
+        if not self.make_activity:
+            return
+        instance = self.env[error["model"]].sudo().browse(error["res_id"])
+        self._make_activity(instance)
+
     def run_single_instance(self, instance):
         self.ensure_one()
         errors = list(filter(lambda x: not x["ok"], self._make_checks(instance)))
+        for error in errors:
+            self._make_activity_for_error(error)
+
         return errors
 
     def run(self):
@@ -199,6 +210,8 @@ class DataPolice(models.Model):
             police.errors = len(errors)
             police.last_errors = json.dumps(errors, indent=4)
             police._post_status_message()
+            for error in errors:
+                self._make_activity_for_error(error)
             self.env.cr.commit()
 
     @api.depends("errors", "checked")

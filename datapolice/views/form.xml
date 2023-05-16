@@ -74,7 +74,7 @@
                 <group>
                   <field name="make_activity"/>
                 </group>
-                <group attrs="{'invisible': [('make_activity', '!=', False)]}">
+                <group attrs="{'invisible': [('make_activity', '=', False)]}">
                   <field name="activity_type_id"/>
                   <field name="activity_deadline_days"/>
                   <field name="activity_summary"/>
