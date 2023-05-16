@@ -25,10 +25,12 @@
             </group>
             <notebook>
               <page string="Fetch Data">
-                <group>
-                  <field name="domain" placeholder="[('name', 'ilike', 'its me')]" attrs="{'invisible': [('fetch_expr', 'not in', [False, ''])]}"/>
-                  <field name="fetch_expr" attrs="{'invisible': [('domain', 'not in', [False, ''])]}" widget='ace' options="{'mode': 'python'}"/>
-                  <div attrs="{'invisible': [('domain', 'not in', [False, ''])]}">
+                <group string="Domain" attrs="{'invisible': [('fetch_expr', 'not in', [False, ''])]}">
+                  <field name="domain" placeholder="[('name', 'ilike', 'its me')]"/>
+                </group>
+                <group string="Fetch Expression" attrs="{'invisible': [('domain', 'not in', [False, ''])]}">
+                  <field name="fetch_expr" widget='ace' options="{'mode': 'python'}"/>
+                  <div>
                   Available: model
                   </div>
                 </group>
