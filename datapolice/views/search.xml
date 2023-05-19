@@ -5,7 +5,7 @@
       <field name="model">data.police</field>
       <field name="arch" type="xml">
         <search>
-          <field name="name" filter_domain="['|', '|', ('expr', 'ilike', self), ('checkdef', 'ilike', self), ('name', 'ilike', self)]"/>
+          <field name="name" filter_domain="['|', ('check_expr', 'ilike', self), ('name', 'ilike', self)]"/>
           <filter name='inactive' domain="[('active', '=', False)]" string='Inactive'/>
         </search>
       </field>
