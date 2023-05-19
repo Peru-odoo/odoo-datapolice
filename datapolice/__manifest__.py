@@ -19,5 +19,5 @@
     'name': 'datapolice',
     'qweb': [],
     'test': [],
-    'version': '14.0.1.3',
+    'version': '14.0.1.4',
     'web': False}

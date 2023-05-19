@@ -5,7 +5,7 @@
       <field name="model">data.police</field>
       <field name="arch" type="xml">
         <tree string="">
-          <button name="run" string="Run" type="object" icon="gtk-execute"/>
+          <button name="run" string="Run" type="object" icon="fa-gear"/>
           <field name="name"/>
           <field name="model_id"/>
           <field name="check_expr"/>
