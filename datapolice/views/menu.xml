@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <odoo>
   <data noupdate="0">
-    <menuitem name="Data-Police" parent="base.menu_administration" id="menu_root"/>
+    <menuitem name="Data-Police" parent="" id="menu_root"/>
     <record model="ir.actions.act_window" id="act_datapolice_window">
       <field name="name">Data-Police</field>
       <field name="res_model">data.police</field>
