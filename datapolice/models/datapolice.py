@@ -111,6 +111,18 @@ class DataPolice(models.Model):
         exec(wrapper, globals_dict)
         return result_dict.get("result")
 
+    @api.model
+    def _get_param_defaults(self, d):
+        d.update(
+            {
+                "datetime": datetime,
+                "date": date,
+                "timedelta": timedelta,
+                "env": self.env,
+            }
+        )
+        return d
+
     def _fetch_objects(self):
         self.ensure_one()
         obj = self.env[self.model_id.model]
@@ -120,13 +132,12 @@ class DataPolice(models.Model):
         else:
             instances = self._exec_get_result(
                 self.fetch_expr,
-                {
-                    "model": obj,
-                    "obj": obj,
-                    "datetime": datetime,
-                    "date": date,
-                    "timedelta": timedelta,
-                },
+                self._get_param_defaults(
+                    {
+                        "model": obj,
+                        "obj": obj,
+                    }
+                ),
             )
         instances = instances.with_context(prefetch_fields=False)
         return instances
@@ -134,7 +145,14 @@ class DataPolice(models.Model):
     def _run_code(self, instance, expr):
         exception = ""
         try:
-            result = self._exec_get_result(expr, {"obj": instance})
+            result = self._exec_get_result(
+                expr,
+                self._get_param_defaults(
+                    {
+                        "obj": instance,
+                    }
+                ),
+            )
             if result is None or result is True:
                 result = True
             else:
