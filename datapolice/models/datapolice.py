@@ -5,6 +5,7 @@ import base64
 from datetime import datetime
 from odoo.exceptions import UserError, RedirectWarning, ValidationError
 import logging
+from datetime import datetime, date, timedelta
 from odoo.tools.safe_eval import safe_eval
 
 _logger = logging.getLogger("datapolice")
@@ -55,7 +56,9 @@ class DataPolice(models.Model):
 
     def _make_activity(self, instance):
         dt = arrow.utcnow().shift(days=self.activity_deadline_days).datetime
-        instance_model = self.env['ir.model'].sudo().search([('model', '=', instance._name)])
+        instance_model = (
+            self.env["ir.model"].sudo().search([("model", "=", instance._name)])
+        )
         data = {
             "activity_type_id": self.activity_type_id.id,
             "res_model_id": instance_model.id,
@@ -69,7 +72,7 @@ class DataPolice(models.Model):
 
         if not self.env["mail.activity"].search_count(
             [
-                ("res_id", "=", data['res_id']),
+                ("res_id", "=", data["res_id"]),
                 ("res_model_id", "=", data["res_model_id"]),
                 ("activity_type_id", "=", data["activity_type_id"]),
             ]
@@ -116,7 +119,14 @@ class DataPolice(models.Model):
             instances = obj.search(domain)
         else:
             instances = self._exec_get_result(
-                self.fetch_expr, {"model": obj, "obj": obj}
+                self.fetch_expr,
+                {
+                    "model": obj,
+                    "obj": obj,
+                    "datetime": datetime,
+                    "date": date,
+                    "timedelta": timedelta,
+                },
             )
         instances = instances.with_context(prefetch_fields=False)
         return instances
@@ -212,7 +222,7 @@ class DataPolice(models.Model):
             police.last_errors = json.dumps(errors, indent=4)
             police._post_status_message()
             for error in errors:
-                self._make_activity_for_error(error)
+                police._make_activity_for_error(error)
             self.env.cr.commit()
 
     @api.depends("errors", "checked")

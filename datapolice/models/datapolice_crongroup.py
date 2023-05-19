@@ -33,8 +33,6 @@ class CronjobGroup(models.Model):
         return res
 
     def run_by_cron(self):
-        self.ensure_one()
-
         polices = self.police_ids.filtered(lambda x: x.enabled)
         polices.run()
         polices._send_mails()
