@@ -270,12 +270,14 @@ class DataPolice(models.Model):
             )
         ):
             if "model" in error and "res_id" in error:
+                obj = self.env[error["model"]].sudo().browse(error["res_id"])
+                objname = str(obj.name_get()[0][1])
                 url = self.env["ir.config_parameter"].get_param("web.base.url")
                 url += "#model=" + error["model"] + "&id=" + str(error["res_id"])
-                link = "<a href='{}'>{}</a>".format(url, error["text"])
-                appendix = "<li>{}</li>\n".format(link)
+                link = f"<a href='{url}'>{objname}: {error['text']}</a>"
+                appendix = f"<li>{link}</li>\n"
             else:
-                appendix = "<li>{}</li>\n".format(error)
+                appendix = "<li>{error}</li>\n"
             text += appendix
             if i < 50:
                 small_text += appendix
@@ -300,7 +302,7 @@ class DataPolice(models.Model):
         for dp in self:
             mail_to = dp._get_all_email_recipients()
             errors = json.loads(dp.last_errors)
-            new_small_text, new_text = self._get_error_text(errors)
+            new_small_text, new_text = dp._get_error_text(errors)
 
             for email in mail_to.split(","):
                 by_email.setdefault(email, {"text": "", "small_text": ""})
