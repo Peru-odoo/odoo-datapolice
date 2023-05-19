@@ -8,12 +8,6 @@
       <field name="view_mode">tree,form</field>
     </record>
     <menuitem parent="menu_root" id="base.menu_datapolice" action="act_datapolice_window"/>
-    <record id="formatters_action" model="ir.actions.act_window">
-      <field name="name">Formatters</field>
-      <field name="res_model">data.police.formatter</field>
-      <field name="view_mode">tree</field>
-    </record>
-    <menuitem parent="menu_root" id="menu_formatters" action="formatters_action"/>
 
 
     <record id='act_cronjob_groups' model='ir.actions.act_window'>

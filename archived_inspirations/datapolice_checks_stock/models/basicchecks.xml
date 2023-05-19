@@ -22,9 +22,5 @@
       <field name="name">Reservation on not internal stocks</field>
       <field name="domain">[('location_id.usage', 'not in', ['internal', 'transfer']), ('reserved_quantity', '&gt;', 0)]</field>
     </record>
-    <record model="data.police.formatter" id="format_stock_move">
-      <field name="model">stock.move</field>
-      <field name="format">{obj.product_uom_qty} From: {obj.location_id.name} To: {obj.location_dest_id.name} State: {obj.state} - {obj.product_id.name} [{obj.product_id.default_code}]</field>
-    </record>
   </data>
 </odoo>

@@ -173,7 +173,7 @@ class DataPolice(models.Model):
             raise ValidationError("Please define a check!")
         for idx, obj in enumerate(instances, 1):
             _logger.debug(f"Checking {self.name} {idx} of {len(instances)}")
-            instance_name = self.env["data.police.formatter"].do_format(obj)
+            instance_name = str(obj.name_get()[0][1])
             res = self._run_code(obj, self.check_expr)
             res["tried_to_fix"] = False
 
