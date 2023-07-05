@@ -360,7 +360,7 @@ class DataPolice(models.Model):
         return {
             "name": f"Errors of {self.name}",
             "view_type": "form",
-            "res_model": self._name,
+            "res_model": self.model_id.model,
             "domain": [("id", "in", ids)],
             "views": [(False, "tree"), (False, "form")],
             "type": "ir.actions.act_window",
