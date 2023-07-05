@@ -16,6 +16,7 @@ class DataPolice(models.Model):
     _name = "data.police"
 
     active = fields.Boolean(default=True)
+    limit = fields.Integer("Limit")
     name = fields.Char("Name", required=True, translate=True)
     fetch_expr = fields.Text(
         "Fetch Expr",
@@ -98,14 +99,16 @@ class DataPolice(models.Model):
                 rec.recipients = recps
 
     @api.model
-    def _exec_get_result(self, code, globals_dict):
+    def _exec_get_result(self, code, globals_dict, expect_result=True):
         code = code.strip()
         code = code.splitlines()
         if code and code[-1].startswith(" ") or code[-1].startswith("\t"):
             code.append("True")
-        code[-1] = "return " + code[-1]
+        if expect_result: 
+            code[-1] = "return " + code[-1]
         code = "\n".join(["  " + x for x in code])
-        wrapper = "def __wrap():\n" f"{code}\n\n" "result_dict['result'] = __wrap()"
+        wrapper = "def __wrap():\n" f"{code}\n\n"
+        wrapper += ("result_dict['result'] = " if expect_result else "") + "__wrap()"
         result_dict = {}
         globals_dict["result_dict"] = result_dict
         exec(wrapper, globals_dict)
@@ -139,10 +142,12 @@ class DataPolice(models.Model):
                     }
                 ),
             )
+        if self.limit:
+            instances = instances[:self.limit]
         instances = instances.with_context(prefetch_fields=False)
         return instances
 
-    def _run_code(self, instance, expr):
+    def _run_code(self, instance, expr, expect_result=True):
         exception = ""
         try:
             result = self._exec_get_result(
@@ -152,6 +157,7 @@ class DataPolice(models.Model):
                         "obj": instance,
                     }
                 ),
+                expect_result=expect_result,
             )
             if result is None or result is True:
                 result = True
@@ -187,7 +193,7 @@ class DataPolice(models.Model):
 
             if not res["ok"] and self.fix_expr:
                 res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(
-                    obj, self.fix_expr
+                    obj, self.fix_expr, expect_result=False
                 )
                 res["tried_to_fix"] = True
                 res["fix_result"] = res_fix
