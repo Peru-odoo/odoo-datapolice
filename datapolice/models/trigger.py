@@ -12,7 +12,6 @@ class Trigger(models.Model):
 
     def _trigger(self, instance):
         errors = self.datapolice_id.run_single_instance(instance)
-        errors = ";".join(errors)
 
         if self.datapolice_id.inform_current_user_immediately:
             text = (
