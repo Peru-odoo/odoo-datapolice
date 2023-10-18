@@ -78,7 +78,7 @@
                 <group attrs="{'invisible': [('make_activity', '=', False)]}">
                   <field name="activity_type_id"/>
                   <field name="activity_deadline_days"/>
-                  <field name="activity_user_id" context="{'invisible': [('activity_user_from_context', '=', True)]}"/>
+                  <field name="activity_user_id" attrs="{'invisible': [('activity_user_from_context', '=', True)]}"/>
                   <field name="activity_user_from_context"/>
                 </group>
               </page>
