@@ -54,6 +54,7 @@ class DataPolice(models.Model):
     activity_deadline_days = fields.Integer("Activity Deadline Days")
     activity_summary = fields.Char("Activity Summary")
     activity_user_id = fields.Many2one("res.users", string="Assign Activity User")
+    activity_user_from_context = fields.Boolean("User from context")
 
     def _make_activity(self, instance):
         dt = arrow.utcnow().shift(days=self.activity_deadline_days).datetime
@@ -70,6 +71,8 @@ class DataPolice(models.Model):
         }
         if self.activity_user_id:
             data["user_id"] = self.activity_user_id.id
+        if self.activity_user_from_context:
+            data["user_id"] = self.env.user.id
 
         if not self.env["mail.activity"].search_count(
             [
