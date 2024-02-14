@@ -1,0 +1,13 @@
+<odoo>
+	<data noupdate='0'>
+		<record id="view_datapolice_log_search" model="ir.ui.view">
+			<field name="model">datapolice.log</field>
+			<field name="arch" type="xml">
+				<search string="">
+					<filter name="group_by_datapolice" string="Datapolice" domain="[]" context="{'group_by':'datapolice_id'}"/>
+					<filter name="group_by_date" string="Date" domain="[]" context="{'group_by':'create_date'}"/>
+				</search>
+			</field>
+		</record>
+	</data>
+</odoo>

@@ -16,5 +16,13 @@
       <field name='view_mode'>tree</field>
     </record>
     <menuitem parent="menu_root" id="menu_datapolice_cronjob_group" action="act_cronjob_groups"/>
+
+    <record id='logs_action' model='ir.actions.act_window'>
+        <field name='name'>Logs</field>
+        <field name='res_model'>datapolice.log</field>
+        <field name='view_mode'>tree</field>
+        <field name="help"><![CDATA[<p> Nothing found!</p>]]></field>
+    </record>
+    <menuitem parent="menu_root" id="menu_logs" action="logs_action"/>
   </data>
 </odoo>
