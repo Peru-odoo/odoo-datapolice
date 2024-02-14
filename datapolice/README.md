@@ -1,15 +1,29 @@
-=========================
-datapolice
-=========================
+# datapolice
 
 
+## Overview
+
+* checks on triggers (any function: create, write, action_confirm)
+* creates activities
+* cronjobbed
+* check function and fix function
+* send detailed error message to user
+* can raise error to end user
+* when check is hit after it logs the complete trace to that problem
+
+
+## Sample Code
+
+
+```
 <record model="data.police" id="products1">
   <field name="model">product.product</field>
   <field name="checkdef">check_incoming_noproduction_nopicking</field>
   <field name="name">Incoming stock moves, that have no production or picking-in</field>
 </record>
+```
 
-@api.multi
+```
 def datapolice_check_same_lot_type(self):
     if self.origin_sales and self.matching_prod_product_ids:
         if not self.lot_type == self.matching_prod_product_ids:
@@ -19,17 +33,20 @@ def datapolice_check_same_lot_type(self):
             return False
     return True
 
+```
+
 or
 
+```
 <record model="data.police" id="products1">
   <field name="model">product.product</field>
   <field name="name">Incoming stock moves, that have no production or picking-in</field>
   <field name="expr">obj.name != 'not allowed'</field>
 </record>
+```
 
 
-Contributors
-------------
+## Contributors
 
-* Marc Wimmer <marc@itewimmer.de>
+* Marc Wimmer <marc@zebroo.de>
 
