@@ -29,7 +29,8 @@
                 <group string="Fetch Expression" attrs="{'invisible': [('domain', 'not in', [False, ''])]}">
                   <field name="fetch_expr" widget='ace' options="{'mode': 'python'}" nolabel="1"/>
                   <div>
-                  Available: <b>model</b>
+                  Available:
+                    <b>model</b>
                   </div>
                 </group>
               </page>
@@ -46,7 +47,8 @@
               <page string="Check">
                 <field name="check_expr" widget="ace" options="{'mode': 'python'}"/>
                 <div>
-                  Available: <b>obj</b>
+                  Available:
+                  <b>obj</b>
                   <br/>
                   Return: True or None for ok; return False or a string with information for an error
                 </div>
@@ -54,7 +56,8 @@
               <page string="Fix">
                 <field name="fix_expr" widget="ace" options="{'mode': 'python'}"/>
                 <div>
-                  Available: <b>obj</b>
+                  Available:
+                  <b>obj</b>
                   <br/>
                 </div>
               </page>
@@ -79,8 +82,16 @@
                   <field name="activity_user_from_context"/>
                 </group>
               </page>
+              <page string="Acknowledged" name="acknowledged">
+                <field name="acknowledge_ids">
+                  <tree create='0' edit='0'>
+                    <button name="open" string="Open" type="object" />
+                    <field name="name"/>
+                    <field name="res_id"/>
+                  </tree>
+                </field>
+              </page>
             </notebook>
-
           </sheet>
           <div class="oe_chatter">
             <field name="message_follower_ids" widget="mail_followers"/>

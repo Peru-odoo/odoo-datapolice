@@ -55,6 +55,7 @@ class DataPolice(models.Model):
     activity_summary = fields.Char("Activity Summary")
     activity_user_id = fields.Many2one("res.users", string="Assign Activity User")
     activity_user_from_context = fields.Boolean("User from context")
+    acknowledge_ids = fields.One2many("datapolice.ack", "datapolice_id")
 
     def _make_activity(self, instance):
         dt = arrow.utcnow().shift(days=self.activity_deadline_days).datetime
@@ -107,7 +108,7 @@ class DataPolice(models.Model):
         code = code.splitlines()
         if code and code[-1].startswith(" ") or code[-1].startswith("\t"):
             code.append("True")
-        if expect_result: 
+        if expect_result:
             code[-1] = "return " + code[-1]
         code = "\n".join(["  " + x for x in code])
         wrapper = "def __wrap():\n" f"{code}\n\n"
@@ -146,7 +147,7 @@ class DataPolice(models.Model):
                 ),
             )
         if self.limit:
-            instances = instances[:self.limit]
+            instances = instances[: self.limit]
         instances = instances.with_context(prefetch_fields=False)
         return instances
 
@@ -375,3 +376,15 @@ class DataPolice(models.Model):
             "type": "ir.actions.act_window",
             "target": "current",
         }
+
+    def acknowledge(self, rec):
+        exist = self.acknowledge_ids.filtered(
+            lambda x: x.res_model == rec._name and x.res_id == rec.id
+        )
+        if not exist:
+            name = rec.name_get()[0][1]
+            exist.create({
+                'name': name,
+                'res_model': rec._name,
+                'res_id': rec.id,
+            })
