@@ -32,7 +32,7 @@ class DataPolice(models.Model):
         "ir.model", string="Model", required=True, ondelete="cascade"
     )
     enabled = fields.Boolean("Enabled", default=True)
-    errors = fields.Integer("Count Errors")
+    errors = fields.Integer("Count Errors", compute="_compute_count_errors", store=True)
     checked = fields.Integer("Count Checked")
     ratio = fields.Float("Success Ratio [%]", compute="_compute_success")
     domain = fields.Text("Domain")
@@ -41,7 +41,6 @@ class DataPolice(models.Model):
     inform_current_user_immediately = fields.Boolean(
         "Inform current user immediately", default=False
     )
-    last_errors = fields.Text("Last Error Log")
     cronjob_group_id = fields.Many2one(
         "datapolice.cronjob.group", string="Cronjob Group"
     )
@@ -56,6 +55,7 @@ class DataPolice(models.Model):
     activity_user_id = fields.Many2one("res.users", string="Assign Activity User")
     activity_user_from_context = fields.Boolean("User from context")
     acknowledge_ids = fields.One2many("datapolice.ack", "datapolice_id")
+    lasterror_ids = fields.One2many("datapolice.lasterror", "datapolice_id")
 
     def _make_activity(self, instance):
         dt = arrow.utcnow().shift(days=self.activity_deadline_days).datetime
@@ -246,8 +246,7 @@ class DataPolice(models.Model):
             results = list(police._make_checks(instances_to_check))
             errors = list(filter(lambda x: not x["ok"], results))
             police.checked = len(results)
-            police.errors = len(errors)
-            police.last_errors = json.dumps(errors, indent=4)
+            police._dump_last_errors(errors)
             police._post_status_message()
             for error in errors:
                 police._make_activity_for_error(error)
@@ -363,6 +362,34 @@ class DataPolice(models.Model):
                 }
             ).send()
 
+    def _dump_last_errors(self, errors):
+        for rec in self:
+            ids = set(x["res_id"] for x in errors)
+
+            for line in list(rec.lasterror_ids):
+                if line.res_id not in ids:
+                    line.sudo().unlink()
+
+            for error in errors:
+                newline = rec.lasterror_ids.new()
+                newline.res_id = error["res_id"]
+                newline.res_model = self.model_id.model
+                ack = self.acknowledge_ids.filtered(
+                    lambda x: x.res_id == newline.res_id
+                )
+                exist = self.lasterror_ids.filtered(
+                    lambda x: x.res_id == newline.res_id
+                )
+                if not ack and not exist:
+                    name = (
+                        self.env[newline.res_model]
+                        .sudo()
+                        .browse(newline.res_id)
+                        .name_get()[0][1]
+                    )
+                    newline.name = name
+                    rec.sudo().lasterror_ids += newline
+
     def show_errors(self):
         errors = json.loads(self.last_errors)
         ids = [x["res_id"] for x in errors if "res_id" in x]
@@ -375,16 +402,44 @@ class DataPolice(models.Model):
             "views": [(False, "tree"), (False, "form")],
             "type": "ir.actions.act_window",
             "target": "current",
+            "context": {
+                "datapolice_id": self.id,
+            },
         }
 
-    def acknowledge(self, rec):
+    def _is_acknowledged(self, rec):
         exist = self.acknowledge_ids.filtered(
             lambda x: x.res_model == rec._name and x.res_id == rec.id
         )
+        return bool(exist)
+
+    def acknowledge(self, rec):
+        exist = self.acknowledge_ids.sudo().filtered(
+            lambda x: x.res_model == rec._name and x.res_id == rec.id
+        )
+        lasterror = self.lasterror_ids.sudo().filtered(
+            lambda x: x.res_model == rec._name and x.res_id == rec.id
+        )
+        name = rec.name_get()[0][1]
+        data = {
+            "datapolice_id": self.id,
+            "name": name,
+            "res_model": rec._name,
+            "res_id": rec.id,
+        }
         if not exist:
-            name = rec.name_get()[0][1]
-            exist.create({
-                'name': name,
-                'res_model': rec._name,
-                'res_id': rec.id,
-            })
+            data.update(
+                {
+                    "who_acknowledged_id": self.env.user.id,
+                }
+            )
+            exist.create(data)
+            lasterror.unlink()
+        else:
+            lasterror.create(data)
+            exist.sudo().unlink()
+
+    @api.depends("lasterror_ids")
+    def _compute_count_errors(self):
+        for rec in self:
+            rec.errors = len(rec.lasterror_ids)

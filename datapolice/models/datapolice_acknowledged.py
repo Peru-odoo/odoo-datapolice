@@ -10,6 +10,13 @@ class DBAcknowledged(models.Model):
     res_model = fields.Char("model", required=True)
     res_id = fields.Integer("ID", required=True)
     name = fields.Char("Name", required=True)
+    comment = fields.Text("Comment")
+    who_acknowledged_id = fields.Many2one('res.users')
+
+    def unacknowledge(self):
+        for rec in self:
+            obj = self.env[rec.datapolice_id.model_id.model].browse(rec.res_id)
+            rec.datapolice_id.acknowledge(obj)
 
     def open(self):
         self.ensure_one()

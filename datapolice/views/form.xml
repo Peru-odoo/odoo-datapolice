@@ -69,7 +69,16 @@
                 </group>
               </page>
               <page string="Last Errors">
-                <field name="last_errors" nolabel="1" readonly="1"/>
+                <field name="lasterror_ids" nolabel="1">
+                  <tree editable="bottom" create="0" delete="0">
+                    <button name="acknowledge" string="Acknowledged" type="object" />
+                    <field name="name" readonly='1'/>
+                    <field name="who_acknowledged_id" readonly='1'/>
+                    <field name="comment"/>
+                    <field name="res_id" readonly='1'/>
+                    <button name="open" string="Open" type="object" />
+                  </tree>
+                </field>
               </page>
               <page string="Make Activity">
                 <group>
@@ -84,10 +93,13 @@
               </page>
               <page string="Acknowledged" name="acknowledged">
                 <field name="acknowledge_ids">
-                  <tree create='0' edit='0'>
+                  <tree create='0' delete="0" editable="bottom">
                     <button name="open" string="Open" type="object" />
-                    <field name="name"/>
-                    <field name="res_id"/>
+                    <field name="name" readonly='1'/>
+                    <field name="who_acknowledged_id" readonly='1'/>
+                    <field name="comment"/>
+                    <field name="res_id" readonly='1'/>
+                    <button name="unacknowledge" string="Unacknowlegde" type="object" />
                   </tree>
                 </field>
               </page>
