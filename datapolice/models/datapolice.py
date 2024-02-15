@@ -16,6 +16,8 @@ class DataPolice(models.Model):
     _name = "data.police"
 
     active = fields.Boolean(default=True)
+    tag_ids = fields.Many2many("datapolice.tag", string="Tags")
+    group_id = fields.Many2one("datapolice.group", string="Group")
     limit = fields.Integer("Limit")
     name = fields.Char("Name", required=True, translate=True)
     fetch_expr = fields.Text(

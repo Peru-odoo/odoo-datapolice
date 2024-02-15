@@ -19,6 +19,8 @@
               <field name="name" required='1'/>
               <field name="model_id" required='1'/>
               <field name="cronjob_group_id"/>
+              <field name="group_id"/>
+              <field name="tag_ids" widget="many2many_tags"/>
             </group>
             <notebook>
               <page string="Fetch Data">

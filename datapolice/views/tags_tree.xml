@@ -1,0 +1,12 @@
+<odoo>
+	<data noupdate='0'>
+		<record id="datapolice_tag_tree" model="ir.ui.view">
+			<field name="model">datapolice.tag</field>
+			<field name="arch" type="xml">
+				<tree editable="bottom">
+					<field name="name" />
+				</tree>
+			</field>
+		</record>
+	</data>
+</odoo>

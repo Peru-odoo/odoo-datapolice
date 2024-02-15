@@ -23,5 +23,24 @@
       </field>
     </record>
     <menuitem parent="menu_root" id="menu_logs" action="logs_action"/>
+    <menuitem id="config_menu" parent="menu_root" name="Configuration"/>
+    <record id='groups_action' model='ir.actions.act_window'>
+      <field name='name'>datapolice.group</field>
+      <field name='res_model'>datapolice.group</field>
+      <field name='view_mode'>tree</field>
+      <field name="help">
+        <![CDATA[<p> Nothing found!</p>]]>
+      </field>
+    </record>
+    <menuitem parent="config_menu" id="menu_groups" action="groups_action"/>
+    <record id='datapolice_tags_action' model='ir.actions.act_window'>
+      <field name='name'>Tags</field>
+      <field name='res_model'>datapolice.tag</field>
+      <field name='view_mode'>tree</field>
+      <field name="help">
+        <![CDATA[<p> Nothing found!</p>]]>
+      </field>
+    </record>
+    <menuitem parent="config_menu" id="menu_datapolice_tags" action="datapolice_tags_action"/>
   </data>
 </odoo>

@@ -6,7 +6,9 @@
       <field name="arch" type="xml">
         <search>
           <field name="name" filter_domain="['|', ('check_expr', 'ilike', self), ('name', 'ilike', self)]"/>
+          <field name="tag_ids" />
           <filter name='inactive' domain="[('active', '=', False)]" string='Inactive'/>
+          <filter name="groupby_group" string="Group" context="{'group_by': 'group_id'}"/>
         </search>
       </field>
     </record>

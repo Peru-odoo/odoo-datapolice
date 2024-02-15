@@ -5,6 +5,8 @@ model_datapolice_trigger,base.group_system,datapolice_trigger_base_group_system,
 model_datapolice_log,base.group_system,datapolice_log_base_group_system,n/a,1,0,0,1
 model_datapolice_lasterror,base.group_system,datapolice_lasterror_base_group_system,n/a,1,1,0,0
 model_datapolice_ack,base.group_system,datapolice_ack_base_group_system,n/a,1,1,0,0
+model_datapolice_tag,base.group_system,datapolice_tag_base_group_system,n/a,1,1,1,1
+model_datapolice_group,base.group_system,datapolice_group_base_group_system,n/a,1,1,1,1
 
 
 
