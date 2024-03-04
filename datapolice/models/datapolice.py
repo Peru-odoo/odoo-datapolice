@@ -394,8 +394,7 @@ class DataPolice(models.Model):
                     rec.sudo().lasterror_ids += newline
 
     def show_errors(self):
-        errors = json.loads(self.last_errors)
-        ids = [x["res_id"] for x in errors if "res_id" in x]
+        ids = self.lasterror_ids.mapped('res_id')
 
         return {
             "name": f"Errors of {self.name}",
