@@ -20,6 +20,7 @@ class DataPolice(models.Model):
     group_id = fields.Many2one("datapolice.group", string="Group")
     limit = fields.Integer("Limit")
     name = fields.Char("Name", required=True, translate=True)
+    responsible_id = fields.Many2one("res.users", string="Responsible")
     fetch_expr = fields.Text(
         "Fetch Expr",
         help="If given then used; return records, otherwise domain is used with model",
@@ -394,8 +395,7 @@ class DataPolice(models.Model):
                     rec.sudo().lasterror_ids += newline
 
     def show_errors(self):
-        errors = json.loads(self.last_errors)
-        ids = [x["res_id"] for x in errors if "res_id" in x]
+        ids = self.lasterror_ids.mapped('res_id')
 
         return {
             "name": f"Errors of {self.name}",

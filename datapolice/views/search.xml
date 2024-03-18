@@ -9,6 +9,7 @@
           <field name="tag_ids" />
           <filter name='inactive' domain="[('active', '=', False)]" string='Inactive'/>
           <filter name="groupby_group" string="Group" context="{'group_by': 'group_id'}"/>
+          <filter name="groupby_responsible" string="Responsible" context="{'group_by': 'responsible_id'}"/>
         </search>
       </field>
     </record>
