@@ -35,8 +35,6 @@
                   Available:
                     <b>model</b>
                   </div>
-                  <h2>Example:</h2>
-                  <pre>obj.price_unit &lt; 100</pre>
                 </group>
               </page>
               <page string="Triggers">
@@ -51,12 +49,26 @@
               </page>
               <page string="Check">
                 <field name="check_expr" widget="ace" options="{'mode': 'python'}"/>
+                <details>
+                <summary>Details</summary>
                 <div>
                   Available:
                   <b>obj</b>
                   <br/>
                   Return: True or None for ok; return False or a string with information for an error
                 </div>
+                <div>
+                  <h2>Example:</h2>
+                  <pre>obj.price_unit &lt; 100</pre>
+                  <hr/>
+                  <pre>
+desc = 'case 1'
+if obj.field == 'a':
+  desc = 'case 2'
+case
+                  </pre>
+                </div>
+                </details>
               </page>
               <page string="Fix">
                 <field name="fix_expr" widget="ace" options="{'mode': 'python'}"/>
