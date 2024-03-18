@@ -78,6 +78,7 @@
                     <field name="who_acknowledged_id" readonly='1'/>
                     <field name="comment"/>
                     <field name="res_id" readonly='1'/>
+                    <field name="exception"/>
                     <button name="open" string="Open" type="object" />
                   </tree>
                 </field>
@@ -101,6 +102,7 @@
                     <field name="who_acknowledged_id" readonly='1'/>
                     <field name="comment"/>
                     <field name="res_id" readonly='1'/>
+                    <field name="exception"/>
                     <button name="unacknowledge" string="Unacknowlegde" type="object" />
                   </tree>
                 </field>

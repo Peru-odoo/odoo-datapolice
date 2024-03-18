@@ -390,6 +390,7 @@ class DataPolice(models.Model):
                         .name_get()[0][1]
                     )
                     newline.name = name
+                    newline.exception = error.get('exception') or ''
                     rec.sudo().lasterror_ids += newline
 
     def show_errors(self):
