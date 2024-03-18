@@ -383,6 +383,9 @@ class DataPolice(models.Model):
                 exist = self.lasterror_ids.filtered(
                     lambda x: x.res_id == newline.res_id
                 )
+                if exist:
+                    if error.get('text'):
+                        exist.exception = error.get('text')
                 if not ack and not exist:
                     name = (
                         self.env[newline.res_model]
@@ -391,7 +394,7 @@ class DataPolice(models.Model):
                         .name_get()[0][1]
                     )
                     newline.name = name
-                    newline.exception = error.get('exception') or ''
+                    newline.exception = error.get('text') or ''
                     rec.sudo().lasterror_ids += newline
 
     def show_errors(self):

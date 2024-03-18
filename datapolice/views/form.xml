@@ -35,6 +35,8 @@
                   Available:
                     <b>model</b>
                   </div>
+                  <h2>Example:</h2>
+                  <pre>obj.price_unit &lt; 100</pre>
                 </group>
               </page>
               <page string="Triggers">
