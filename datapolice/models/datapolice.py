@@ -198,6 +198,7 @@ class DataPolice(models.Model):
         if not self.check_expr:
             raise ValidationError("Please define a check!")
         for idx, obj in enumerate(instances, 1):
+            obj = obj.sudo()
             _logger.debug(f"Checking {self.name} {idx} of {len(instances)}")
             instance_name = str(obj.name_get()[0][1])
             res = self._run_code(obj, self.check_expr)
