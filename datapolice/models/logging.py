@@ -5,7 +5,7 @@ from odoo.exceptions import UserError, RedirectWarning, ValidationError
 
 class Logging(models.Model):
     _name = "datapolice.log"
-    _ordre = 'create_date desc'
+    _order = 'create_date desc'
 
     datapolice_id = fields.Many2one("data.police")
     excinfo = fields.Char("Exception")

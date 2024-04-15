@@ -13,6 +13,7 @@ class DBAcknowledged(models.Model):
     comment = fields.Text("Comment")
     who_acknowledged_id = fields.Many2one('res.users')
     exception = fields.Text("Exception")
+    date = fields.Datetime("Date")
 
     def unacknowledge(self):
         for rec in self:

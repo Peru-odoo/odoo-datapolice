@@ -30,6 +30,11 @@ class DataPolice(models.Model):
         required=False,
         help="Input: obj/object - return False for error, return None/True for ok, or raise Exception or return a string",
     )
+    date_field_id = fields.Many2one(
+        "ir.model.fields",
+        "Date Field",
+        help="To put errors into the correct time period, this field is required.",
+    )
     fix_expr = fields.Char("Def to fix error", required=False)
     model_id = fields.Many2one(
         "ir.model", string="Model", required=True, ondelete="cascade"
@@ -48,7 +53,7 @@ class DataPolice(models.Model):
         "datapolice.cronjob.group", string="Cronjob Group"
     )
     trigger_ids = fields.One2many(
-        "datapolice.trigger", "datapolice_id", ondelete="cascade"
+        "datapolice.trigger", "datapolice_id", ondelete="cascade", copy=True
     )
 
     make_activity = fields.Boolean("Make Activity")
@@ -59,6 +64,11 @@ class DataPolice(models.Model):
     activity_user_from_context = fields.Boolean("User from context")
     acknowledge_ids = fields.One2many("datapolice.ack", "datapolice_id")
     lasterror_ids = fields.One2many("datapolice.lasterror", "datapolice_id")
+
+    def del_all_errors(self):
+        self.acknowledge_ids.sudo().unlink()
+        self.lasterror_ids.sudo().unlink()
+        return True
 
     def _make_activity(self, instance):
         dt = arrow.utcnow().shift(days=self.activity_deadline_days).datetime
@@ -107,7 +117,7 @@ class DataPolice(models.Model):
 
     @api.model
     def _exec_get_result(self, code, globals_dict, expect_result=True):
-        code = code.strip()
+        code = (code or "").strip()
         code = code.splitlines()
         if code and code[-1].startswith(" ") or code[-1].startswith("\t"):
             code.append("True")
@@ -136,9 +146,12 @@ class DataPolice(models.Model):
     def _fetch_objects(self):
         self.ensure_one()
         obj = self.env[self.model_id.model]
-        if self.domain:
-            domain = safe_eval(self.domain)
-            instances = obj.search(domain)
+        if self.domain or not self.fetch_expr:
+            domain = safe_eval(self.domain or "[]")
+            order = None
+            if self.date_field_id:
+                order = f"{self.date_field_id.name} desc"
+            instances = obj.search(domain, order=order)
         else:
             instances = self._exec_get_result(
                 self.fetch_expr,
@@ -189,6 +202,7 @@ class DataPolice(models.Model):
             instance_name = str(obj.name_get()[0][1])
             res = self._run_code(obj, self.check_expr)
             res["tried_to_fix"] = False
+            date_value = False if not self.date_field_id else obj[self.date_field_id.name]
 
             def pushup(text):
                 yield {
@@ -196,6 +210,7 @@ class DataPolice(models.Model):
                     "model": obj._name,
                     "res_id": obj.id,
                     "text": text,
+                    "date": date_value,
                 }
 
             if not res["ok"] and self.fix_expr:
@@ -384,8 +399,8 @@ class DataPolice(models.Model):
                     lambda x: x.res_id == newline.res_id
                 )
                 if exist:
-                    if error.get('text'):
-                        exist.exception = error.get('text')
+                    if error.get("text"):
+                        exist.exception = error.get("text")
                 if not ack and not exist:
                     name = (
                         self.env[newline.res_model]
@@ -394,11 +409,13 @@ class DataPolice(models.Model):
                         .name_get()[0][1]
                     )
                     newline.name = name
-                    newline.exception = error.get('text') or ''
+                    newline.date = error.get('date', False)
+                    newline.exception = error.get("text") or ""
+
                     rec.sudo().lasterror_ids += newline
 
     def show_errors(self):
-        ids = self.lasterror_ids.mapped('res_id')
+        ids = self.lasterror_ids.mapped("res_id")
 
         return {
             "name": f"Errors of {self.name}",

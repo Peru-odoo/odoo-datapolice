@@ -8,6 +8,7 @@
         <form string="" version="7.0">
           <header>
             <button name="run" string="Run" type="object" context="{'from_ui': True}"/>
+            <button name="del_all_errors" string="Delete all errors" type="object" />
           </header>
           <sheet>
             <div class="oe_button_box" name="button_box">
@@ -18,6 +19,7 @@
             <group col="4">
               <field name="name" required='1'/>
               <field name="model_id" required='1'/>
+              <field name="date_field_id" domain="[('model_id', '=', model_id)]"/>
               <field name="cronjob_group_id"/>
               <field name="group_id"/>
               <field name="tag_ids" widget="many2many_tags"/>
@@ -50,24 +52,24 @@
               <page string="Check">
                 <field name="check_expr" widget="ace" options="{'mode': 'python'}"/>
                 <details>
-                <summary>Details</summary>
-                <div>
+                  <summary>Details</summary>
+                  <div>
                   Available:
-                  <b>obj</b>
-                  <br/>
+                    <b>obj</b>
+                    <br/>
                   Return: True or None for ok; return False or a string with information for an error
-                </div>
-                <div>
-                  <h2>Example:</h2>
-                  <pre>obj.price_unit &lt; 100</pre>
-                  <hr/>
-                  <pre>
+                  </div>
+                  <div>
+                    <h2>Example:</h2>
+                    <pre>obj.price_unit &lt; 100</pre>
+                    <hr/>
+                    <pre>
 desc = 'case 1'
 if obj.field == 'a':
   desc = 'case 2'
 case
                   </pre>
-                </div>
+                  </div>
                 </details>
               </page>
               <page string="Fix">
@@ -89,6 +91,7 @@ case
                 <field name="lasterror_ids" nolabel="1">
                   <tree editable="bottom" create="0" delete="0">
                     <button name="acknowledge" string="Acknowledged" type="object" />
+                    <field name="date"/>
                     <field name="name" readonly='1'/>
                     <field name="who_acknowledged_id" readonly='1'/>
                     <field name="comment"/>
@@ -113,6 +116,7 @@ case
                 <field name="acknowledge_ids">
                   <tree create='0' delete="0" editable="bottom">
                     <button name="open" string="Open" type="object" />
+                    <field name="date"/>
                     <field name="name" readonly='1'/>
                     <field name="who_acknowledged_id" readonly='1'/>
                     <field name="comment"/>
