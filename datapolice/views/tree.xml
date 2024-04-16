@@ -11,8 +11,6 @@
           <field name="name"/>
           <field name="responsible_id"/>
           <field name="model_id"/>
-          <field name="check_expr"/>
-          <field name="fix_expr"/>
           <field name="enabled"/>
           <field name="domain"/>
           <field name="errors"/>
