@@ -24,11 +24,11 @@ class Trigger(models.Model):
                 f"for: {self.datapolice_id.name}\n"
                 f"Errors: {errors}"
             )
-            self.env['datapolice.log']._insert_log(text, trace, datapolice_id)
+            self.env['datapolice.log'].sudo()._insert_log(text, trace, datapolice_id)
 
             if self.datapolice_id.inform_current_user_immediately:
                 raise ValidationError(text)
         else:
-            self.env['datapolice.log']._insert_log("", trace, datapolice_id)
+            self.env['datapolice.log'].sudo()._insert_log("", trace, datapolice_id)
 
         self.datapolice_id._send_mail_for_single_instance(instance, errors)
