@@ -1,11 +1,11 @@
 <odoo>
 	<data noupdate='0'>
-
 		<record id="view_cronjobgroup_tree" model="ir.ui.view">
 			<field name="model">datapolice.cronjob.group</field>
 			<field name="arch" type="xml">
-				<tree>
+				<tree editable="bottom">
 					<field name="cronjob_id"/>
+					<field name="police_ids" widget="many2many_tags"/>
 				</tree>
 			</field>
 		</record>
@@ -26,6 +26,5 @@
 				</form>
 			</field>
 		</record>
-
 	</data>
 </odoo>

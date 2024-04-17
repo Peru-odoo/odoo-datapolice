@@ -46,6 +46,7 @@
                     <field name="method"/>
                     <field name="model_id"/>
                     <field name="link_expression"/>
+                    <field name="enabled"/>
                   </tree>
                 </field>
               </page>
