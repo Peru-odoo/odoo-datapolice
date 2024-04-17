@@ -199,11 +199,12 @@ class DataPolice(models.Model):
             raise ValidationError("Please define a check!")
         for idx, obj in enumerate(instances, 1):
             obj = obj.sudo()
-            _logger.debug(f"Checking {self.name} {idx} of {len(instances)}")
             instance_name = str(obj.name_get()[0][1])
             res = self._run_code(obj, self.check_expr)
             res["tried_to_fix"] = False
-            date_value = False if not self.date_field_id else obj[self.date_field_id.name]
+            date_value = (
+                False if not self.date_field_id else obj[self.date_field_id.name]
+            )
 
             def pushup(text):
                 yield {
@@ -233,9 +234,6 @@ class DataPolice(models.Model):
                                 res.get("fix_result", {}).get("exception"),
                             ],
                         )
-                    )
-                    _logger.error(
-                        f"Data Police {self.name}: not ok at {obj._name} {obj.id} {text}"
                     )
                     yield from pushup(text)
                     self.env.cr.commit()
@@ -410,7 +408,7 @@ class DataPolice(models.Model):
                         .name_get()[0][1]
                     )
                     newline.name = name
-                    newline.date = error.get('date', False)
+                    newline.date = error.get("date", False)
                     newline.exception = error.get("text") or ""
 
                     rec.sudo().lasterror_ids += newline
