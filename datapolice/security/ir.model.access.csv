@@ -7,6 +7,8 @@ model_datapolice_lasterror,base.group_system,datapolice_lasterror_base_group_sys
 model_datapolice_ack,base.group_system,datapolice_ack_base_group_system,n/a,1,1,0,0
 model_datapolice_tag,base.group_system,datapolice_tag_base_group_system,n/a,1,1,1,1
 model_datapolice_group,base.group_system,datapolice_group_base_group_system,n/a,1,1,1,1
+model_datapolice_trigger_field,base.group_system,datapolice_field_trigger_base_group_system,n/a,1,1,1,1
+
 
 
 

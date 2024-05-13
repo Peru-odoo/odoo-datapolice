@@ -5,7 +5,6 @@
     "category": "uncategorized",
     "css": [],
     "data": [
-        
         "views/cronjob_group.xml",
         "views/form.xml",
         "views/group_tree.xml",

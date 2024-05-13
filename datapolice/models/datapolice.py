@@ -55,6 +55,9 @@ class DataPolice(models.Model):
     trigger_ids = fields.One2many(
         "datapolice.trigger", "datapolice_id", ondelete="cascade", copy=True
     )
+    field_trigger_ids = fields.One2many(
+        "datapolice.trigger_field", "datapolice_id", ondelete="cascade", copy=True
+    )
 
     make_activity = fields.Boolean("Make Activity")
     activity_type_id = fields.Many2one("mail.activity.type", string="Activity Type")
