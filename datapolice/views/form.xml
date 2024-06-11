@@ -40,6 +40,7 @@
                 </group>
               </page>
               <page string="Triggers">
+                <a href="https://www.zebroo.de/knowledge/article/259" target="_blank">Online Help for defining Methods</a>
                 <field name="trigger_ids">
                   <tree editable="bottom">
                     <field name="domain"/>
