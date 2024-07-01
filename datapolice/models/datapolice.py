@@ -1,4 +1,5 @@
 from odoo import models, fields, api, _
+import uuid
 import arrow
 import json
 import base64
@@ -6,7 +7,18 @@ from datetime import datetime
 from odoo.exceptions import UserError, RedirectWarning, ValidationError
 import logging
 from datetime import datetime, date, timedelta
+from contextlib import contextmanager
+from odoo.tools import table_exists
 from odoo.tools.safe_eval import safe_eval
+
+try:
+    from odoo.addons.queue_job.exception import RetryableJobError
+except:
+
+    class RetryableJobError(Exception):
+        def __init__(self, *arsg, **kw):
+            super().__init__(*args, **kw)
+
 
 _logger = logging.getLogger("datapolice")
 
@@ -19,6 +31,7 @@ class DataPolice(models.Model):
     tag_ids = fields.Many2many("datapolice.tag", string="Tags")
     group_id = fields.Many2one("datapolice.group", string="Group")
     limit = fields.Integer("Limit")
+    fix_counter = fields.Integer("Fix Counter")
     name = fields.Char("Name", required=True, translate=True)
     responsible_id = fields.Many2one("res.users", string="Responsible")
     fetch_expr = fields.Text(
@@ -67,6 +80,9 @@ class DataPolice(models.Model):
     activity_user_from_context = fields.Boolean("User from context")
     acknowledge_ids = fields.One2many("datapolice.ack", "datapolice_id")
     lasterror_ids = fields.One2many("datapolice.lasterror", "datapolice_id")
+    queuejob_channel = fields.Char("Queuejob Channel", default="root")
+    queuejob_priority = fields.Integer("Queuejob Priority", default=10)
+    queuejob_enabled = fields.Boolean("Use queuejobs")
 
     def del_all_errors(self):
         self.acknowledge_ids.sudo().unlink()
@@ -197,52 +213,101 @@ class DataPolice(models.Model):
             "exception": exception,
         }
 
+    def _has_queuejobs(self):
+        return table_exists(self.env.cr, "queue_job")
+
     def _make_checks(self, instances):
-        if not self.check_expr:
-            raise ValidationError("Please define a check!")
-        for idx, obj in enumerate(instances, 1):
-            obj = obj.sudo()
-            instance_name = str(obj.name_get()[0][1])
-            res = self._run_code(obj, self.check_expr)
-            res["tried_to_fix"] = False
-            date_value = (
-                False if not self.date_field_id else obj[self.date_field_id.name]
+        RUN_ID = str(uuid.uuid4())
+        try:
+            for idx, obj in enumerate(instances, 1):
+                identity_key = f"{RUN_ID}_{obj._name}_{obj.id}"
+                self._with_delay(
+                    identity_key=identity_key,
+                    enabled=not self.env.context.get("datapolice_noasync"),
+                )._check_instance(obj, RUN_ID)
+                self.env.cr.commit()
+        finally:
+            self.env.cr.commit()
+            self._with_delay(
+                enabled=not self.env.context.get("datapolice_noasync")
+            )._start_observer(RUN_ID)
+
+    def _start_observer(self, run_id):
+        if self._has_queuejobs():
+            count = self.env["queue.job"].search_count(
+                [
+                    ("identity_key", "ilike", run_id),
+                    ("state", "not in", ["done", "cancel", "failed"]),
+                ]
             )
-
-            def pushup(text):
-                yield {
-                    "ok": res["ok"],
-                    "model": obj._name,
-                    "res_id": obj.id,
-                    "text": text,
-                    "date": date_value,
-                }
-
-            if not res["ok"] and self.fix_expr:
-                res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(
-                    obj, self.fix_expr, expect_result=False
+            if count:
+                raise RetryableJobError(
+                    "Observing: found undone preceding jobs",
+                    seconds=60,
+                    ignore_retry=True,
                 )
-                res["tried_to_fix"] = True
-                res["fix_result"] = res_fix
+        self._post_status_message()
 
-                if not res["ok"] and (
-                    not res["tried_to_fix"] or not res["fix_result"]["ok"]
-                ):
-                    text = "; ".join(
-                        filter(
-                            bool,
-                            [
-                                instance_name,
-                                res.get("exception", ""),
-                                res.get("fix_result", {}).get("exception"),
-                            ],
-                        )
+    def _check_instance(self, obj, RUN_ID):
+        def pushup(text):
+            yield {
+                "ok": res["ok"],
+                "model": obj._name,
+                "res_id": obj.id,
+                "text": text,
+                "date": date_value,
+            }
+
+        obj = obj.sudo()
+        instance_name = str(obj.name_get()[0][1])
+        check_expr = self.check_expr or "False"
+        res = self._run_code(obj, check_expr)
+        res["tried_to_fix"] = False
+        date_value = False if not self.date_field_id else obj[self.date_field_id.name]
+        success = []
+
+        if not res["ok"] and self.fix_expr:
+            res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(
+                obj, self.fix_expr, expect_result=False
+            )
+            self._with_delay(
+                identity_key=f"{RUN_ID}_{obj._name}_{obj.id}",
+                enabled=not self.env.context.get("datapolice_noasync"),
+            )._inc_fixed()
+            res["tried_to_fix"] = True
+            res["fix_result"] = res_fix
+            res2 = self._run_code(obj, check_expr)
+            res["fix_result"] = res2
+            for k, v in res2.items():
+                res[k] = v
+
+            if not res["ok"] and (
+                not res["tried_to_fix"] or not res["fix_result"]["ok"]
+            ):
+                text = "; ".join(
+                    filter(
+                        bool,
+                        [
+                            instance_name,
+                            res.get("exception", ""),
+                            res.get("fix_result", {}).get("exception"),
+                        ],
                     )
-                    yield from pushup(text)
-                    self.env.cr.commit()
+                )
+                success = pushup(text)
 
-            else:
-                yield from pushup(res["exception"] or "")
+        else:
+            success = pushup(res["exception"] or "")
+
+        errors = list(filter(lambda x: not x["ok"], success))
+        self._dump_last_errors(errors)
+        for error in errors:
+            self._make_activity_for_error(error)
+
+        self._with_delay(
+            identity_key=f"{RUN_ID}_{obj._name}_{obj.id}",
+            enabled=not self.env.context.get("datapolice_noasync"),
+        )._inc_checked()
 
     def _make_activity_for_error(self, error):
         if not self.make_activity:
@@ -252,25 +317,54 @@ class DataPolice(models.Model):
 
     def run_single_instance(self, instance):
         self.ensure_one()
-        errors = list(filter(lambda x: not x["ok"], self._make_checks(instance)))
+        errors = list(filter(lambda x: not x["ok"], self._check_instance(instance)))
         for error in errors:
             self._make_activity_for_error(error)
 
         return errors
 
+    def reset_fix_counter(self):
+        self.fix_counter = 0
+        return True
+
+    def run_async(self):
+        self.with_context(datapolice_async=True).run()
+        return True
+
+    def run_now(self):
+        self.with_context(datapolice_noasync=True).run()
+        return True
+
     def run(self):
         for police in self:
-            errors = []
+            police._run_police()
 
-            instances_to_check = police._fetch_objects()
-            results = list(police._make_checks(instances_to_check))
-            errors = list(filter(lambda x: not x["ok"], results))
-            police.checked = len(results)
-            police._dump_last_errors(errors)
-            police._post_status_message()
-            for error in errors:
-                police._make_activity_for_error(error)
-            self.env.cr.commit()
+    def _run_police(self):
+        police = self
+
+        instances_to_check = police._fetch_objects()
+        police.reset()
+        police._make_checks(instances_to_check)
+
+    def _inc_checked(self):
+        self.checked += 1
+
+    def _inc_fixed(self):
+        self.fix_counter += 1
+
+    def _with_delay(self, *params, **kw):
+        enabled = True
+        if "enabled" in kw:
+            enabled = kw.pop("enabled")
+        if enabled and hasattr(self, "with_delay"):
+            return self.with_delay(*params, **kw)
+        return self
+
+    def reset(self):
+        for rec in self:
+            rec.checked = 0
+            for line in list(rec.lasterror_ids):
+                line.sudo().unlink()
 
     @api.depends("errors", "checked")
     def _compute_success(self):
@@ -385,11 +479,6 @@ class DataPolice(models.Model):
     def _dump_last_errors(self, errors):
         for rec in self:
             ids = set(x["res_id"] for x in errors)
-
-            for line in list(rec.lasterror_ids):
-                if line.res_id not in ids:
-                    line.sudo().unlink()
-
             for error in errors:
                 newline = rec.lasterror_ids.new()
                 newline.res_id = error["res_id"]
