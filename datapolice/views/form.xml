@@ -27,12 +27,12 @@
             </group>
             <notebook>
               <page string="Fetch Data">
-                <group string="Domain" attrs="{'invisible': [('fetch_expr', 'not in', [False, ''])]}">
-                  <field name="domain" placeholder="[('name', 'ilike', 'its me')]" nolabel="1"/>
+                <group string="Domain" attrs="{'invisible': [('fetch_expr', 'not in', [False, ''])]}" >
+                  <field name="domain" placeholder="[('name', 'ilike', 'its me')]" nolabel="1" colspan='2'/>
                   <field name="limit"/>
                 </group>
                 <group string="Fetch Expression" attrs="{'invisible': [('domain', 'not in', [False, ''])]}">
-                  <field name="fetch_expr" widget='ace' options="{'mode': 'python'}" nolabel="1"/>
+                  <field name="fetch_expr" widget='ace' options="{'mode': 'python'}" nolabel="1" colspan='2'/>
                   <div>
                   Available:
                     <b>model</b>
