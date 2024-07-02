@@ -60,7 +60,7 @@ class DataPolice(models.Model):
     recipients = fields.Char("Mail-Recipients", size=1024)
     user_ids = fields.Many2many("res.users", string="Recipients (users)")
     inform_current_user_immediately = fields.Boolean(
-        "Inform current user immediately", default=False
+        "Inform current user immediately (Needs write trigger to be defined)", default=False
     )
     cronjob_group_id = fields.Many2one(
         "datapolice.cronjob.group", string="Cronjob Group"
@@ -308,6 +308,7 @@ class DataPolice(models.Model):
             identity_key=f"{RUN_ID}_{obj._name}_{obj.id}",
             enabled=not self.env.context.get("datapolice_noasync"),
         )._inc_checked()
+        return errors
 
     def _make_activity_for_error(self, error):
         if not self.make_activity:
@@ -317,11 +318,7 @@ class DataPolice(models.Model):
 
     def run_single_instance(self, instance):
         self.ensure_one()
-        errors = list(filter(lambda x: not x["ok"], self._check_instance(instance)))
-        for error in errors:
-            self._make_activity_for_error(error)
-
-        return errors
+        return self._check_instance(instance, RUN_ID=str(uuid.uuid4()))
 
     def reset_fix_counter(self):
         self.fix_counter = 0
@@ -557,3 +554,13 @@ class DataPolice(models.Model):
     def _compute_count_errors(self):
         for rec in self:
             rec.errors = len(rec.lasterror_ids)
+
+    @api.onchange("inform_current_user_immediately")
+    def _changed_inform_current_user_immediately(self):
+        for rec in self:
+            if rec.inform_current_user_immediately:
+                trigger = rec.trigger_ids.new()
+                trigger.model_id = self.model_id
+                trigger.method = 'write'
+                trigger.link_expression = 'object'
+                rec.trigger_ids += trigger
