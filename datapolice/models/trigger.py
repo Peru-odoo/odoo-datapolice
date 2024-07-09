@@ -12,7 +12,9 @@ class BaseTrigger(models.AbstractModel):
     )
 
     def _trigger(self, instance, args_packed, method_name):
-        errors = self.datapolice_id.run_single_instance(instance)
+        errors = self.datapolice_id.with_context(
+            datapolice_can_commit=False
+        ).run_single_instance(instance)
         trace = "".join(traceback.format_stack())
         datapolice_id = self.datapolice_id.id
 

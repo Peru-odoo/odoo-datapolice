@@ -216,6 +216,15 @@ class DataPolice(models.Model):
     def _has_queuejobs(self):
         return table_exists(self.env.cr, "queue_job")
 
+    @api.model
+    def _can_commit(self):
+        if 'datapolice_can_commit' in self.env.context:
+            val = self.env.context.get('datapolice_can_commit')
+            if val is None:
+                return True
+            return bool(val)
+        return True
+
     def _make_checks(self, instances):
         RUN_ID = str(uuid.uuid4())
         try:
@@ -225,9 +234,11 @@ class DataPolice(models.Model):
                     identity_key=identity_key,
                     enabled=not self.env.context.get("datapolice_noasync"),
                 )._check_instance(obj, RUN_ID)
-                self.env.cr.commit()
+                if self._can_commit():
+                    self.env.cr.commit()               self.env.cr.commit()
         finally:
-            self.env.cr.commit()
+            if self._can_commit():
+                self.env.cr.commit()
             self._with_delay(
                 enabled=not self.env.context.get("datapolice_noasync")
             )._start_observer(RUN_ID)
