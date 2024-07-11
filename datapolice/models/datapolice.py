@@ -260,6 +260,8 @@ class DataPolice(models.Model):
         self._post_status_message()
 
     def _check_instance(self, obj, RUN_ID):
+        if not self.enabled:
+            return
         def pushup(text):
             yield {
                 "ok": res["ok"],
