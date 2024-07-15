@@ -286,6 +286,7 @@ class DataPolice(models.Model):
             self._with_delay(
                 identity_key=f"{RUN_ID}_{obj._name}_{obj.id}",
                 enabled=not self.env.context.get("datapolice_noasync"),
+                priority=999,
             )._inc_fixed()
             res["tried_to_fix"] = True
             res["fix_result"] = res_fix
@@ -320,6 +321,7 @@ class DataPolice(models.Model):
         self._with_delay(
             identity_key=f"{RUN_ID}_{obj._name}_{obj.id}",
             enabled=not self.env.context.get("datapolice_noasync"),
+            priority=999,
         )._inc_checked()
         return errors
 
