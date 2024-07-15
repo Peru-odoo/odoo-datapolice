@@ -21,6 +21,7 @@ class CronjobGroup(models.Model):
                     "datapolice.model_datapolice_cronjob_group"
                 ).id,
                 "code": f"model.browse({self.id}).run_by_cron()",
+                "numbercall": -1,
             }
         )
 
