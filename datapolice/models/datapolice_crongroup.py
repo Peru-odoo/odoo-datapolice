@@ -1,4 +1,5 @@
 from odoo import _, api, fields, models, SUPERUSER_ID
+import uuid
 from odoo.exceptions import UserError, RedirectWarning, ValidationError
 
 
@@ -35,6 +36,9 @@ class CronjobGroup(models.Model):
 
     def run_by_cron(self):
         polices = self.police_ids.filtered(lambda x: x.enabled)
-        polices.run()
-        polices._send_mails()
+        identifier = str(uuid.uuid4())
+        for police in polices:
+            police.message_post(body=f"Started by cronjob {self.cronjob_id.name}")
+            police._with_delay().run_async(identifier)
+        polices._with_delay()._send_mails(identifier)
         return True

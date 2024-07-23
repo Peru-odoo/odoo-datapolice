@@ -52,7 +52,7 @@ class DataPolice(models.Model):
     model_id = fields.Many2one(
         "ir.model", string="Model", required=True, ondelete="cascade"
     )
-    enabled = fields.Boolean("Enabled", default=True)
+    enabled = fields.Boolean("Enabled", default=True, tracking=True)
     errors = fields.Integer("Count Errors", compute="_compute_count_errors", store=True)
     checked = fields.Integer("Count Checked")
     ratio = fields.Float("Success Ratio [%]", compute="_compute_success")
@@ -60,7 +60,8 @@ class DataPolice(models.Model):
     recipients = fields.Char("Mail-Recipients", size=1024)
     user_ids = fields.Many2many("res.users", string="Recipients (users)")
     inform_current_user_immediately = fields.Boolean(
-        "Inform current user immediately (Needs write trigger to be defined)", default=False
+        "Inform current user immediately (Needs write trigger to be defined)",
+        default=False,
     )
     cronjob_group_id = fields.Many2one(
         "datapolice.cronjob.group", string="Cronjob Group"
@@ -218,21 +219,24 @@ class DataPolice(models.Model):
 
     @api.model
     def _can_commit(self):
-        if 'datapolice_can_commit' in self.env.context:
-            val = self.env.context.get('datapolice_can_commit')
+        if "datapolice_can_commit" in self.env.context:
+            val = self.env.context.get("datapolice_can_commit")
             if val is None:
                 return True
             return bool(val)
         return True
 
     def _make_checks(self, instances):
-        RUN_ID = str(uuid.uuid4())
+        RUN_ID = self.env.context.get("datapolice_identifier") or str(uuid.uuid4())
         try:
             for idx, obj in enumerate(instances, 1):
                 identity_key = f"{RUN_ID}_{obj._name}_{obj.id}"
                 self._with_delay(
                     identity_key=identity_key,
-                    enabled=not self.env.context.get("datapolice_noasync"),
+                    channel=self.queuejob_channel or "root",
+                    priority=self.queuejob_priority or 99,
+                    enabled=not self.env.context.get("datapolice_noasync")
+                    and self.queuejob_enabled,
                 )._check_instance(obj, RUN_ID)
                 if self._can_commit():
                     self.env.cr.commit()               self.env.cr.commit()
@@ -339,8 +343,10 @@ class DataPolice(models.Model):
         self.fix_counter = 0
         return True
 
-    def run_async(self):
-        self.with_context(datapolice_async=True).run()
+    def run_async(self, identifier=None):
+        self.with_context(
+            datapolice_noasync=False, datapolice_identifier=identifier
+        ).run()
         return True
 
     def run_now(self):
@@ -364,11 +370,15 @@ class DataPolice(models.Model):
     def _inc_fixed(self):
         self.fix_counter += 1
 
+    @api.model
+    def _has_queuejobs(self):
+        return hasattr(self, "with_delay")
+
     def _with_delay(self, *params, **kw):
         enabled = True
         if "enabled" in kw:
             enabled = kw.pop("enabled")
-        if enabled and hasattr(self, "with_delay"):
+        if enabled and self._has_queuejobs():
             return self.with_delay(*params, **kw)
         return self
 
@@ -450,8 +460,21 @@ class DataPolice(models.Model):
         subject = f"DataPolice: {instance.name_get()[0][1]}"
         self._send_mail_technically(by_email, subject=subject)
 
-    def _send_mails(self):
+    def _send_mails(self, identifier):
         by_email = {}
+        if self._has_queuejobs():
+            if (
+                self.env["queue.job"]
+                .sudo()
+                .search_count(
+                    [
+                        ("identity_key", "ilike", identifier),
+                        ("state", "not in", ["done", "failed", "cancelled"]),
+                    ]
+                )
+            ):
+                raise RetryableJobError("Still running", seconds=60)
+
         for dp in self:
             mail_to = dp._get_all_email_recipients()
             errors = json.loads(dp.last_errors)
@@ -576,6 +599,6 @@ class DataPolice(models.Model):
             if rec.inform_current_user_immediately:
                 trigger = rec.trigger_ids.new()
                 trigger.model_id = self.model_id
-                trigger.method = 'write'
-                trigger.link_expression = 'object'
+                trigger.method = "write"
+                trigger.link_expression = "object"
                 rec.trigger_ids += trigger
