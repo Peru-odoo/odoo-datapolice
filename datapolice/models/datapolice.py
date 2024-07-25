@@ -476,7 +476,7 @@ class DataPolice(models.Model):
             ):
                 raise RetryableJobError("Still running", seconds=60)
 
-        for dp in self:
+        for dp in self.filtered(lambda x: x.enabled):
             mail_to = dp._get_all_email_recipients()
             errors = json.loads(dp.last_errors)
             new_small_text, new_text = dp._get_error_text(errors)
@@ -597,7 +597,7 @@ class DataPolice(models.Model):
     @api.onchange("inform_current_user_immediately")
     def _changed_inform_current_user_immediately(self):
         for rec in self:
-            if rec.inform_current_user_immediately:
+            if rec.inform_current_user_immediately and rec.enabled:
                 trigger = rec.trigger_ids.new()
                 trigger.model_id = self.model_id
                 trigger.method = "write"
