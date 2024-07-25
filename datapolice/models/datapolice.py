@@ -240,7 +240,7 @@ class DataPolice(models.Model):
                     and self.queuejob_enabled,
                 )._check_instance(obj, RUN_ID)
                 if self._can_commit():
-                    self.env.cr.commit()               self.env.cr.commit()
+                    self.env.cr.commit()
         finally:
             if self._can_commit():
                 self.env.cr.commit()
