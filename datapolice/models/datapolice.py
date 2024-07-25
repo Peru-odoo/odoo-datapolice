@@ -102,6 +102,7 @@ class DataPolice(models.Model):
             "automated": True,
             "date_deadline": fields.Datetime.to_string(dt),
             "summary": self.activity_summary,
+            "datapolice_id": self.id,
         }
         if self.activity_user_id:
             data["user_id"] = self.activity_user_id.id
@@ -112,7 +113,7 @@ class DataPolice(models.Model):
             [
                 ("res_id", "=", data["res_id"]),
                 ("res_model_id", "=", data["res_model_id"]),
-                ("activity_type_id", "=", data["activity_type_id"]),
+                ("datapolice_id", "=", self.id),
             ]
         ):
             self.env["mail.activity"].create(data)
@@ -602,3 +603,6 @@ class DataPolice(models.Model):
                 trigger.method = "write"
                 trigger.link_expression = "object"
                 rec.trigger_ids += trigger
+
+    def delete_all_activities(self):
+        self.env['mail.activity'].search([('datapolice_id', '=', self.id)]).unlink()

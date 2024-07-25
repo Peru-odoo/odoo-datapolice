@@ -121,6 +121,7 @@ case
               </page>
               <page string="Make Activity">
                 <group>
+                  <button name="delete_all_activities" string="Delete all created activities" type="object"/>
                   <field name="make_activity"/>
                 </group>
                 <group attrs="{'invisible': [('make_activity', '=', False)]}">
