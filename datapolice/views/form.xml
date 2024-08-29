@@ -7,9 +7,9 @@
       <field name="arch" type="xml">
         <form string="" version="7.0">
           <header>
-            <button name="run_async" string="Run Queuejobs" type="object" context="{'from_ui': True}" attrs="{'invisible': [('queuejob_enabled', '=', False)]}"/>
-            <button name="run_now" string="Run Now" type="object" context="{'from_ui': True}" attrs="{'invisible': [('queuejob_enabled', '=', False)]}"/>
-            <button name="run" string="Run Now" type="object" context="{'from_ui': True}" attrs="{'invisible': [('queuejob_enabled', '=', True)]}"/>
+            <button name="run_async" string="Run Queuejobs" type="object" context="{'from_ui': True}" invisible="queuejob_enabled == False"/>
+            <button name="run_now" string="Run Now" type="object" context="{'from_ui': True}" invisible="queuejob_enabled == False"/>
+            <button name="run" string="Run Now" type="object" context="{'from_ui': True}" invisible="queuejob_enabled == True"/>
             <button name="del_all_errors" string="Delete all errors" type="object" />
             <button name="reset_fix_counter" string="Reset Fix Counter" type="object"/>
           </header>
@@ -32,11 +32,11 @@
             </group>
             <notebook>
               <page string="Fetch Data">
-                <group string="Domain" attrs="{'invisible': [('fetch_expr', 'not in', [False, ''])]}" >
+                <group string="Domain" invisible="fetch_expr not in [False, '']" >
                   <field name="domain" placeholder="[('name', 'ilike', 'its me')]" nolabel="1" colspan='2'/>
                   <field name="limit"/>
                 </group>
-                <group string="Fetch Expression" attrs="{'invisible': [('domain', 'not in', [False, ''])]}">
+                <group string="Fetch Expression" invisible="domain not in [False, '']">
                   <field name="fetch_expr" widget='ace' options="{'mode': 'python'}" nolabel="1" colspan='2' placeholder="model._get_something()"/>
                   <div>
                   Available:
@@ -124,10 +124,10 @@ case
                   <button name="delete_all_activities" string="Delete all created activities" type="object"/>
                   <field name="make_activity"/>
                 </group>
-                <group attrs="{'invisible': [('make_activity', '=', False)]}">
+                <group invisible="make_activity == False">
                   <field name="activity_type_id"/>
                   <field name="activity_deadline_days"/>
-                  <field name="activity_user_id" attrs="{'invisible': [('activity_user_from_context', '=', True)]}"/>
+                  <field name="activity_user_id" invisible="activity_user_from_context == True"/>
                   <field name="activity_user_from_context"/>
                 </group>
               </page>
@@ -149,7 +149,7 @@ case
                 <group>
                   <field name="queuejob_enabled"/>
                 </group>
-                <group attrs="{'invisible': [('queuejob_enabled', '=', False)]}">
+                <group invisible="queuejob_enabled == False">
                   <field name="queuejob_channel"/>
                   <field name="queuejob_priority"/>
                 </group>
