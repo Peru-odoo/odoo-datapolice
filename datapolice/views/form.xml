@@ -79,7 +79,7 @@
                   </div>
                   <div>
                     <h2>Example:</h2>
-                    <pre>obj.price_unit &lt; 100</pre>
+                    <pre>obj.price_unit &amp;&lt; 100</pre>
                     <hr/>
                     <pre>
 desc = 'case 1'
