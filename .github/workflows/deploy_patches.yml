@@ -10,7 +10,12 @@ permissions: write-all
 
 jobs:
   deploy-subversions:
-    uses: Odoo-Ninjas/git-workflows/.github/workflows/deploy_to_subversions.yml@v1
+    uses: Odoo-Ninjas/git-workflows/.github/workflows/deploy_to_subversions.yml@v5
+    concurrency:
+      group: deploy-subversions-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    secrets: inherit
     with:
-      branches: "11.0 13.0 14.0 15.0 16.0"
+      repo_url: git@github.com:marcwimmer/odoo-datapolice.git
+      branches: "11.0:main 13.0:main 14.0:main 15.0:main 16.0:main 17.0:main"
 
