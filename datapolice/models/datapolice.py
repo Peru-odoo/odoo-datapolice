@@ -300,9 +300,7 @@ class DataPolice(models.Model):
             for k, v in res2.items():
                 res[k] = v
 
-            if not res["ok"] and (
-                not res["tried_to_fix"] or not res["fix_result"]["ok"]
-            ):
+            if not res["fix_result"]["ok"]:
                 text = "; ".join(
                     filter(
                         bool,
