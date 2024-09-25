@@ -16,6 +16,5 @@ jobs:
       cancel-in-progress: true
     secrets: inherit
     with:
-      repo_url: git@github.com:marcwimmer/odoo-datapolice.git
       branches: "11.0:main 13.0:main 14.0:main 15.0:main 16.0:main 17.0:main"
 
