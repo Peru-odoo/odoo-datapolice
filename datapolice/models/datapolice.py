@@ -267,6 +267,7 @@ class DataPolice(models.Model):
     def _check_instance(self, obj, RUN_ID):
         if not self.enabled:
             return
+
         def pushup(text):
             yield {
                 "ok": res["ok"],
@@ -476,12 +477,15 @@ class DataPolice(models.Model):
 
         for dp in self.filtered(lambda x: x.enabled):
             mail_to = dp._get_all_email_recipients()
-            errors = [{
-                'text': x.exception,
-                'comment': x.comment,
-                'model': x.res_model,
-                'res_id': x.res_id,
-            } for x in dp.lasterror_ids]
+            errors = [
+                {
+                    "text": x.exception,
+                    "comment": x.comment,
+                    "model": x.res_model,
+                    "res_id": x.res_id,
+                }
+                for x in dp.lasterror_ids
+            ]
             new_small_text, new_text = dp._get_error_text(errors)
 
             for email in mail_to.split(","):
@@ -608,4 +612,4 @@ class DataPolice(models.Model):
                 rec.trigger_ids += trigger
 
     def delete_all_activities(self):
-        self.env['mail.activity'].search([('datapolice_id', '=', self.id)]).unlink()
+        self.env["mail.activity"].search([("datapolice_id", "=", self.id)]).unlink()
