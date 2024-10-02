@@ -10,6 +10,7 @@ from datetime import datetime, date, timedelta
 from contextlib import contextmanager
 from odoo.tools import table_exists
 from odoo.tools.safe_eval import safe_eval
+from odoo import registry
 
 try:
     from odoo.addons.queue_job.exception import RetryableJobError
@@ -31,7 +32,7 @@ class DataPolice(models.Model):
     tag_ids = fields.Many2many("datapolice.tag", string="Tags")
     group_id = fields.Many2one("datapolice.group", string="Group")
     limit = fields.Integer("Limit")
-    fix_counter = fields.Integer("Fix Counter")
+    fix_counter = fields.Integer("Fix Counter", compute="_compute_increment")
     name = fields.Char("Name", required=True, translate=True)
     responsible_id = fields.Many2one("res.users", string="Responsible")
     fetch_expr = fields.Text(
@@ -54,7 +55,7 @@ class DataPolice(models.Model):
     )
     enabled = fields.Boolean("Enabled", default=True, tracking=True)
     errors = fields.Integer("Count Errors", compute="_compute_count_errors", store=True)
-    checked = fields.Integer("Count Checked")
+    checked = fields.Integer("Count Checked", compute="_compute_increment")
     ratio = fields.Float("Success Ratio [%]", compute="_compute_success")
     domain = fields.Text("Domain")
     recipients = fields.Char("Mail-Recipients", size=1024)
@@ -231,7 +232,7 @@ class DataPolice(models.Model):
         RUN_ID = self.env.context.get("datapolice_identifier") or str(uuid.uuid4())
         try:
             for idx, obj in enumerate(instances, 1):
-                identity_key = f"{RUN_ID}_{obj._name}_{obj.id}"
+                identity_key = f"{RUN_ID}_dp_{self.id}_{obj._name}_{obj.id}"
                 self._with_delay(
                     identity_key=identity_key,
                     channel=self.queuejob_channel or "root",
@@ -239,14 +240,12 @@ class DataPolice(models.Model):
                     enabled=not self.env.context.get("datapolice_noasync")
                     and self.queuejob_enabled,
                 )._check_instance(obj, RUN_ID)
-                if self._can_commit():
-                    self.env.cr.commit()
         finally:
-            if self._can_commit():
-                self.env.cr.commit()
             self._with_delay(
-                enabled=not self.env.context.get("datapolice_noasync")
+                enabled=not self.env.context.get("datapolice_noasync"), priority=800,
             )._start_observer(RUN_ID)
+        if self._can_commit():
+            self.env.cr.commit()
 
     def _start_observer(self, run_id):
         if self._has_queuejobs():
@@ -289,11 +288,13 @@ class DataPolice(models.Model):
             res_fix = self.with_context(datapolice_run_fixdef=True)._run_code(
                 obj, self.fix_expr, expect_result=False
             )
-            self._with_delay(
-                identity_key=f"{RUN_ID}_{obj._name}_{obj.id}",
-                enabled=not self.env.context.get("datapolice_noasync"),
-                priority=999,
-            )._inc_fixed()
+            self.env['datapolice.increment'].sudo().create({
+                'dp_id': self.id,
+                'run_id': RUN_ID,
+                'model': obj._name,
+                'res_id': obj.id,
+                'ttype': 'fix',
+            })
             res["tried_to_fix"] = True
             res["fix_result"] = res_fix
             res2 = self._run_code(obj, check_expr)
@@ -322,11 +323,13 @@ class DataPolice(models.Model):
         for error in errors:
             self._make_activity_for_error(error)
 
-        self._with_delay(
-            identity_key=f"{RUN_ID}_{obj._name}_{obj.id}",
-            enabled=not self.env.context.get("datapolice_noasync"),
-            priority=999,
-        )._inc_checked()
+        self.env['datapolice.increment'].sudo().create({
+            'ttype': 'check',
+            'run_id': RUN_ID,
+            'dp_id': self.id,
+            'model': obj._name,
+            'id': obj.id,
+        })
         return errors
 
     def _make_activity_for_error(self, error):
@@ -360,8 +363,10 @@ class DataPolice(models.Model):
     def _run_police(self):
         police = self
 
-        instances_to_check = police._fetch_objects()
         police.reset()
+        self.env.cr.commit()
+        instances_to_check = police._fetch_objects()
+        self.env.cr.commit()
         police._make_checks(instances_to_check)
 
     def _inc_checked(self):
@@ -613,3 +618,22 @@ class DataPolice(models.Model):
 
     def delete_all_activities(self):
         self.env["mail.activity"].search([("datapolice_id", "=", self.id)]).unlink()
+
+    def _compute_increment(self):
+        reg = registry(self.env.cr.dbname)
+        for rec in self:
+            with reg.cursor() as cr:
+                cr.execute("set transaction ISOLATION LEVEL READ COMMITTED;")
+                sql = "select run_id from datapolice_increment where dp_id=%s and ttype=%s order by create_date desc limit 1"
+                cr.execute(sql, (rec.id, 'check',))
+                maxrun = cr.fetchone()
+                if maxrun:
+                    maxrun = maxrun[0]
+                sql = "select count(*) from datapolice_increment where dp_id=%s and ttype='fix'"
+                cr.execute(sql, (rec.id, ))
+                rec.fix_counter = cr.fetchone()[0]
+
+                sql = "select count(*) from datapolice_increment where dp_id=%s and run_id=%s and ttype='check'"
+                cr.execute(sql, (rec.id, maxrun))
+                rec.checked = cr.fetchone()[0]
+                cr.execute("ROLLBACK;")
