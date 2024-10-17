@@ -456,6 +456,8 @@ class DataPolice(models.Model):
 
     def _send_mail_for_single_instance(self, instance, errors):
         mail_to = self._get_all_email_recipients()
+        if not mail_to:
+            return
         new_small_text, new_text = self._get_error_text(errors)
         by_email = {}
         for email in mail_to.split(","):
@@ -504,7 +506,7 @@ class DataPolice(models.Model):
             if not texts["text"]:
                 continue
             text = base64.b64encode(texts["text"].encode("utf-8"))
-            self.env["mail.mail"].create(
+            self.env["mail.mail"].sudo().create(
                 {
                     "auto_delete": True,
                     "subject": subject or f"DataPolice Run {datetime.now()}",
