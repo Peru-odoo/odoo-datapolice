@@ -440,7 +440,7 @@ class DataPolice(models.Model):
             if "model" in error and "res_id" in error:
                 obj = self.env[error["model"]].sudo().browse(error["res_id"])
                 objname = str(obj.name_get()[0][1])
-                url = self.env["ir.config_parameter"].get_param("web.base.url")
+                url = self.env["ir.config_parameter"].sudo().get_param("web.base.url")
                 url += "#model=" + error["model"] + "&id=" + str(error["res_id"])
                 link = f"<a href='{url}'>{objname}: {error['text']}</a>"
                 appendix = f"<li>{link}</li>\n"
